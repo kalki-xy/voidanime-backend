@@ -294,6 +294,26 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
+// ---------- HINDI DEBUG (temporary: see raw HTML from the domain Vercel reaches) ----------
+app.get('/api/hindi/debug', async (req,res)=>{
+  const axios2 = require('axios');
+  const domains = ['animesalttv.to','animesalt.ro','animesalt.me','animesalt.in','animesalt.ac','animesalt.to','animesalt.link'];
+  const out = [];
+  for (const d of domains) {
+    try {
+      const r = await axios2.get('https://' + d + '/?s=' + encodeURIComponent(String(req.query.q||'naruto')), {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' },
+        timeout: 12000, maxRedirects: 5, validateStatus: null
+      });
+      const body = typeof r.data === 'string' ? r.data : '';
+      out.push({ domain: d, status: r.status, len: body.length, hasAA: body.indexOf('aa-movies') >= 0, hasLnkBlk: body.indexOf('lnk-blk') >= 0, hasEpisodeByTemp: body.indexOf('episode_by_temp') >= 0, sample: body.slice(0, 400) });
+    } catch (e) {
+      out.push({ domain: d, error: String(e.message || e) });
+    }
+  }
+  res.json({ ok: true, domains: out });
+});
+
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
 app.get('/api/proxy/image', async (req,res)=>{
   const url = req.query.url;
