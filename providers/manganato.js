@@ -1,18 +1,18 @@
-// Manganato provider — HTML/JSON scraper (readmanganato.com / manganato.com)
+// Manganato provider — HTML/JSON scraper (natomanga.com — MangaNato rebrand)
 // id format: 'manga-xxxx' ; chapter id format: 'manga-xxxx/chapter-y'
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
-// readmanganato + redirect targets serve incomplete TLS chains to datacenter clients
+// natomanga + legacy redirect targets serve incomplete TLS chains to datacenter clients
 // hammer: disable TLS verification for this scraper backend (public read-only scraping)
 try { process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; } catch(e){}
 const AGENT = new https.Agent({ rejectUnauthorized: false });
-const BASE = 'https://manganato.com';
-const READ = 'https://readmanganato.com';
+const BASE = 'https://natomanga.com';
+const READ = 'https://www.natomanga.com';
 const H = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
   'Accept-Language': 'en',
-  'Referer': 'https://manganato.com/'
+  'Referer': 'https://natomanga.com/'
 };
 
 function stripHost(u){
@@ -29,7 +29,7 @@ async function search(q, opts){
       timeout: 20000
     });
     } catch(e){
-      // fallback: HTML search on manganato.com
+      // fallback: HTML search on natomanga.com
       try {
         const r2 = await axios.get(`${BASE}/search/story/` + encodeURIComponent(String(q).toLowerCase().replace(/[^a-z0-9]+/g, '_')), { headers: H, httpsAgent: AGENT, timeout: 25000 });
         const $ = cheerio.load(r2.data);
