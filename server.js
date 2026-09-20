@@ -7,9 +7,7 @@ const path = require('path');
 // Plain top-level requires so @vercel/node (ncc) bundles them — placeholder stubs keep missing ones loadable
 const mangadexProvider = require('./providers/mangadex');
 const mangapillProvider = require('./providers/mangapill');
-const weebcentralProvider = require('./providers/weebcentral');
-const comickProvider = require('./providers/comick');
-const mangafireProvider = require('./providers/mangafire');
+const manganatoProvider = require('./providers/manganato');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,8 +37,7 @@ app.use((req,res,next)=>{
 
 const providers = {};
 [
-  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['weebcentral', weebcentralProvider],
-  ['comick', comickProvider], ['mangafire', mangafireProvider]
+  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider]
 ].forEach(([k, v]) => { if (v) providers[k] = v; });
 
 // Helper to get provider (stubs fall back to the first real provider)
@@ -60,10 +57,11 @@ app.get('/api/health', (req,res)=>{
 app.get('/api/providers', (req,res)=>{
   const all = [
     { id:'mangadex', name:'MangaDex', type:'Official API', desc:'Direct public API' },
-    { id:'comick', name:'ComicK', type:'Official API', desc:'Fast API fallback' },
     { id:'mangapill', name:'MangaPill', type:'Scraper', desc:'Cheerio scraper' },
-    { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Large manhwa library' },
-    { id:'mangafire', name:'MangaFire', type:'Scraper (CF)', desc:'Cloudflare protected' }
+    { id:'manganato', name:'Manganato', type:'Scraper', desc:'Huge library, fast' },
+    { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Blocked: Cloudflare 403' },
+    { id:'mangafire', name:'MangaFire', type:'Scraper', desc:'Blocked: Cloudflare' },
+    { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' }
   ];
   res.json({
     providers: all.map(p => Object.assign({}, p, { status: providers[p.id] ? (providers[p.id].__stub ? 'placeholder' : 'working') : 'missing' })),
@@ -252,6 +250,7 @@ app.get('/api/proxy/image', async (req,res)=>{
     // Determine referer based on domain
     let referer = 'https://mangadex.org/';
     if(url.includes('mangapill')) referer = 'https://mangapill.com/';
+    if(url.includes('manganato') || url.includes('mkklcdn') || url.includes('natomanga')) referer = 'https://readmanganato.com/';
     if(url.includes('weebcentral')) referer = 'https://weebcentral.com/';
     if(url.includes('mangafire')) referer = 'https://mangafire.to/';
     if(url.includes('comick')) referer = 'https://comick.io/';
