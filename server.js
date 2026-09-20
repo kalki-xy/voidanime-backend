@@ -294,30 +294,31 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v3 (temporary: dump search card markup + hrefs) ----------
+// ---------- HINDI DEBUG v4 (temporary: series page structure) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
-  const q = String(req.query.q || 'naruto');
-  const domains = ['animesalt.ro','animesalt.me','animesalttv.to','multishows.top'];
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
   const out = [];
-  for (const d of domains) {
+  async function grab(url){
+    const r = await axios2.get(url, { headers: HDRS, timeout: 12000, maxRedirects: 5, validateStatus: null });
+    return typeof r.data === 'string' ? r.data : '';
+  }
+  for (const d of ['animesalt.ro','animesalttv.to']) {
     try {
-      const r = await axios2.get('https://' + d + '/?s=' + encodeURIComponent(q), {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' },
-        timeout: 12000, maxRedirects: 5, validateStatus: null
-      });
-      const body = typeof r.data === 'string' ? r.data : '';
+      const body = await grab('https://' + d + '/anime/naruto/');
       const hrefs = [];
-      const re = /href="([^"]*\/(?:series|tv|movies|episode|anime)\/[^"]*)"/gi;
+      const re = /href="([^"]*)"/g;
       let m;
-      while ((m = re.exec(body)) !== null && hrefs.length < 12) { if (hrefs.indexOf(m[1]) < 0) hrefs.push(m[1]); }
-      let sample = '';
+      while ((m = re.exec(body)) !== null && hrefs.length < 14) {
+        const h = m[1];
+        if (/(episode|watch|season|temporada|capitulo|chapter|\?p=)/i.test(h) && hrefs.indexOf(h) < 0) hrefs.push(h.slice(0, 110));
+      }
+      const iframes = (body.match(/<iframe[^>]*src="[^"]{0,120}/g) || []).slice(0, 5);
       const low = body.toLowerCase();
-      const k = low.indexOf('<div class="result-item');
-      const k2 = low.indexOf(q.toLowerCase());
-      const start = k >= 0 ? k : (k2 >= 0 ? Math.max(0, k2 - 300) : 0);
-      sample = body.slice(start, start + 1100).replace(/\s+/g, ' ');
-      out.push({ d: d, len: body.length, hrefs: hrefs, sample: sample });
+      let k = low.indexOf('episode');
+      if (k < 0) k = low.indexOf('temporada');
+      const sample = k >= 0 ? body.slice(Math.max(0, k - 200), k + 700).replace(/\s+/g, ' ') : '';
+      out.push({ d: d, len: body.length, hrefs: hrefs, iframes: iframes, sample: sample });
     } catch (e) {
       out.push({ d: d, err: String(e.message || e).slice(0, 80) });
     }
