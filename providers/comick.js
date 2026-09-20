@@ -1,5 +1,86 @@
-// Placeholder provider — replace with the real ComicK API provider when available.
-// Real file drops in with no server changes needed.
-const ERR = 'ComicK provider not available yet — replace this placeholder with the real provider file.';
-async function unavailable(){ throw new Error(ERR); }
-module.exports = { __stub: true, search: unavailable, getInfo: unavailable, getChapters: unavailable, getPages: unavailable, getPagesByNumber: unavailable };
+// ComicK provider — public JSON API (api.comick.fun)
+// Search -> slug; info -> hid; chapters paginated (full list); images via meo.comick.art
+const axios = require('axios');
+const API = 'https://api.comick.fun';
+const IMG = 'https://meo.comick.art/file';
+const H = { 'User-Agent': 'VoidAnime-Backend/1.0 (manga reader)', 'Accept': 'application/json' };
+
+async function search(q, opts){
+  opts = opts || {};
+  const params = { page: 1, limit: 24, tachiyomi: true };
+  if (q) params.q = String(q);
+  else params.sort = 'follow';
+  const r = await axios.get(`${API}/v1.0/search`, { params, headers: H, timeout: 20000 });
+  const list = (r.data && r.data.results) || [];
+  return list.map(m => ({
+    id: m.slug || m.hid,
+    title: m.title || (m.md_titles && m.md_titles[0] && m.md_titles[0].title) || 'Untitled',
+    coverUrl: (m.md_covers && m.md_covers[0] && m.md_covers[0].b2key) ? `${IMG}/${m.md_covers[0].b2key}` : null,
+    description: ''
+  }));
+}
+
+async function comicBySlug(slug){
+  const r = await axios.get(`${API}/comic/${encodeURIComponent(slug)}`, { params: { lang: 'en' }, headers: H, timeout: 20000 });
+  return r.data && r.data.comic ? r.data : null;
+}
+
+async function chapterList(hid){
+  const all = [];
+  let page = 1;
+  while (page <= 40){
+    const r = await axios.get(`${API}/chapters/${hid}`, {
+      params: { lang: 'en', page, limit: 100, order: 'asc' },
+      headers: H, timeout: 25000
+    });
+    const batch = (r.data && r.data.chapters) || [];
+    batch.forEach(c => all.push({
+      id: c.hid,
+      number: c.chap != null ? String(c.chap) : ('' + (all.length + 1)),
+      title: c.title || '',
+      date: c.created_at || null
+    }));
+    if (batch.length < 100 || all.length >= 4000) break;
+    page++;
+  }
+  return all;
+}
+
+async function getInfo(id){
+  const data = await comicBySlug(id);
+  if (!data) throw new Error('comic not found: ' + id);
+  const c = data.comic;
+  const chapters = await chapterList(c.hid);
+  return {
+    id: c.slug || id,
+    title: c.title || 'Untitled',
+    description: c.desc ? String(c.desc).replace(/<[^>]*>/g, '').slice(0, 400) : '',
+    coverUrl: (c.md_covers && c.md_covers[0] && c.md_covers[0].b2key) ? `${IMG}/${c.md_covers[0].b2key}` : null,
+    status: (c.status && (c.status.name || c.status)) || null,
+    chapters
+  };
+}
+
+async function getChapters(id){
+  const data = await comicBySlug(id);
+  if (!data) throw new Error('comic not found: ' + id);
+  return chapterList(data.comic.hid);
+}
+
+async function getPages(chapterId){
+  const r = await axios.get(`${API}/chapter/${chapterId}`, { headers: H, timeout: 25000 });
+  const ch = r.data && r.data.chapter;
+  const imgs = (ch && ch.md_images) || [];
+  return imgs.map(im => `${IMG}/${im.b2key}`);
+}
+
+async function getPagesByNumber(id, chapterNumber, chapterId){
+  if (chapterId) return getPages(chapterId);
+  const chapters = await getChapters(id);
+  const target = String(chapterNumber);
+  const ch = chapters.find(c => c.number === target);
+  if (!ch) throw new Error('chapter not found: ' + target);
+  return getPages(ch.id);
+}
+
+module.exports = { search, getInfo, getChapters, getPages, getPagesByNumber };
