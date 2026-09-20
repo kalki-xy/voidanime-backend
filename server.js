@@ -302,7 +302,7 @@ app.get('/api/hindi/watch', async (req,res)=>{
   const cacheKey = 'jaw:' + anilistId + ':' + ep;
   const cached = cache.get(cacheKey);
   if(cached) return res.json(cached);
-  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Origin': 'https://justanime.to/', 'Referer': 'https://justanime.to/' };
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Origin': 'https://justanime.to' };
   const found = { sub: [], dub: [] };
   for (const sv of ['megaplay', 'animegg']) {
     try {
@@ -373,18 +373,6 @@ app.get('/api/hindi/media', async (req,res)=>{
       r.data.pipe(res);
     }
   } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
-});
-
-// ---------- HINDI DEBUG v11 (raw justanime response dump) ----------
-app.get('/api/hindi/debug', async (req,res)=>{
-  const out = [];
-  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Origin': 'https://justanime.to/', 'Referer': 'https://justanime.to/', 'Accept': 'application/json, text/plain, */*' };
-  try {
-    const r = await axios.get('https://core.justanime.to/api/watch/20/episode/1/megaplay', { headers: HDRS, timeout: 15000, validateStatus: null });
-    const raw = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
-    out.push({ st: r.status, head: String(raw).slice(0, 700) });
-  } catch (e) { out.push({ err: String(e.message || e).slice(0, 140) }); }
-  res.json({ ok: true, out: out });
 });
 
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
