@@ -375,6 +375,26 @@ app.get('/api/hindi/media', async (req,res)=>{
   } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
 });
 
+// ---------- HINDI DEBUG v10 (self-test media proxy + watch route) ----------
+app.get('/api/hindi/debug', async (req,res)=>{
+  const out = [];
+  try {
+    const m3u8 = 'https://vid.megaplay.su/hls/20260823_075123_1ebf6213/master.m3u8';
+    const px = 'https://voidanime-backend.vercel.app/api/hindi/media?u=' + encodeURIComponent(m3u8) + '&r=animesalt';
+    const r = await axios.get(px, { timeout: 20000, validateStatus: null });
+    const txt = typeof r.data === 'string' ? r.data : '';
+    const lines = txt.split('\n').filter(function(l){ return l && l.indexOf('EXT') !== 0; }).slice(0, 3);
+    out.push({ st: r.status, ct: (r.headers && r.headers['content-type']) || '', head: lines });
+  } catch (e) { out.push({ err: String(e.message || e).slice(0, 120) }); }
+  try {
+    const r2 = await axios.get('https://voidanime-backend.vercel.app/api/hindi/watch?anilistId=20&ep=1', { timeout: 25000, validateStatus: null });
+    const j = r2.data || {};
+    const first = function(k){ return (j[k] && j[k][0] && j[k][0].url) ? j[k][0].url.slice(0, 90) : null; };
+    out.push({ watch: true, sub: (j.sub || []).length, dub: (j.dub || []).length, subFirst: first('sub'), dubFirst: first('dub') });
+  } catch (e) { out.push({ err2: String(e.message || e).slice(0, 120) }); }
+  res.json({ ok: true, out: out });
+});
+
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
 app.get('/api/proxy/image', async (req,res)=>{
   const url = req.query.url;
