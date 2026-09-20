@@ -8,6 +8,7 @@ const path = require('path');
 const mangadexProvider = require('./providers/mangadex');
 const mangapillProvider = require('./providers/mangapill');
 const manganatoProvider = require('./providers/manganato');
+const toonilyProvider = require('./providers/toonily');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,7 +38,7 @@ app.use((req,res,next)=>{
 
 const providers = {};
 [
-  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider]
+  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider], ['toonily', toonilyProvider]
 ].forEach(([k, v]) => { if (v) providers[k] = v; });
 
 // Helper to get provider (stubs fall back to the first real provider)
@@ -59,6 +60,7 @@ app.get('/api/providers', (req,res)=>{
     { id:'mangadex', name:'MangaDex', type:'Official API', desc:'Direct public API' },
     { id:'mangapill', name:'MangaPill', type:'Scraper', desc:'Cheerio scraper' },
     { id:'manganato', name:'Manganato', type:'Scraper', desc:'Huge library, fast' },
+    { id:'toonily', name:'Toonily', type:'Scraper', desc:'Full manhwa library (Madara)' },
     { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Blocked: Cloudflare 403' },
     { id:'mangafire', name:'MangaFire', type:'Scraper', desc:'Blocked: Cloudflare' },
     { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' }
@@ -250,11 +252,12 @@ app.get('/api/proxy/image', async (req,res)=>{
     // Determine referer based on domain
     let referer = 'https://mangadex.org/';
     if(url.includes('mangapill') || url.includes('readdetectiveconan')) referer = 'https://mangapill.com/';
-    if(url.includes('natomanga') || url.includes('manganato') || url.includes('mkklcdn')) referer = 'https://natomanga.com/';
+    if(url.includes('natomanga') || url.includes('manganato') || url.includes('mkklcdn')) referer = 'https://natomago.com/';
     if(url.includes('weebcentral')) referer = 'https://weebcentral.com/';
     if(url.includes('mangafire')) referer = 'https://mangafire.to/';
     if(url.includes('comick')) referer = 'https://comick.io/';
     if(url.includes('mangadex')) referer = 'https://mangadex.org/';
+    if(url.includes('toonily')) referer='https://toonily.com/';
 
     const response = await axios.get(url, {
       responseType: 'stream',
