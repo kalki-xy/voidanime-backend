@@ -294,25 +294,35 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG (temporary: compact domain probe) ----------
+// ---------- HINDI DEBUG v3 (temporary: dump search card markup + hrefs) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
-  const domains = ['animesalttv.to','animesalt.ro','animesalt.me','animesalt.in','animesalt.ac','animesalt.to','animesalt.link','toonstream.dad','toonstream.vip','multishows.top','gokuhd.com','desidubanime.me'];
+  const q = String(req.query.q || 'naruto');
+  const domains = ['animesalt.ro','animesalt.me','animesalttv.to','multishows.top'];
   const out = [];
   for (const d of domains) {
     try {
-      const r = await axios2.get('https://' + d + '/?s=' + encodeURIComponent(String(req.query.q||'naruto')), {
+      const r = await axios2.get('https://' + d + '/?s=' + encodeURIComponent(q), {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' },
         timeout: 12000, maxRedirects: 5, validateStatus: null
       });
       const body = typeof r.data === 'string' ? r.data : '';
-      const tm = body.match(/<title>([^<]{0,80})</i);
-      out.push({ d: d, st: r.status, len: body.length, cf: body.indexOf('Just a moment') >= 0 || body.indexOf('cf-challenge') >= 0 || body.indexOf('challenge-platform') >= 0, aa: body.indexOf('aa-movies') >= 0, lnk: body.indexOf('lnk-blk') >= 0, ebt: body.indexOf('episode_by_temp') >= 0, t: tm ? tm[1].trim() : '' });
+      const hrefs = [];
+      const re = /href="([^"]*\/(?:series|tv|movies|episode|anime)\/[^"]*)"/gi;
+      let m;
+      while ((m = re.exec(body)) !== null && hrefs.length < 12) { if (hrefs.indexOf(m[1]) < 0) hrefs.push(m[1]); }
+      let sample = '';
+      const low = body.toLowerCase();
+      const k = low.indexOf('<div class="result-item');
+      const k2 = low.indexOf(q.toLowerCase());
+      const start = k >= 0 ? k : (k2 >= 0 ? Math.max(0, k2 - 300) : 0);
+      sample = body.slice(start, start + 1100).replace(/\s+/g, ' ');
+      out.push({ d: d, len: body.length, hrefs: hrefs, sample: sample });
     } catch (e) {
-      out.push({ d: d, err: String(e.message || e).slice(0, 90) });
+      out.push({ d: d, err: String(e.message || e).slice(0, 80) });
     }
   }
-  res.json({ ok: true, domains: out });
+  res.json({ ok: true, out: out });
 });
 
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
