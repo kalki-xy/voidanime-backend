@@ -1,15 +1,16 @@
-
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const path = require('path');
 
-const mangadexProvider = require('./providers/mangadex');
-const mangapillProvider = require('./providers/mangapill');
-const weebcentralProvider = require('./providers/weebcentral');
-const comickProvider = require('./providers/comick');
-const mangafireProvider = require('./providers/mangafire');
+// Tolerant loading: backend boots even if some provider files are missing
+function tryReq(p){ try { return require(p); } catch(e){ console.warn('[provider] not loaded:', p, '-', e.message); return null; } }
+const mangadexProvider = tryReq('./providers/mangadex');
+const mangapillProvider = tryReq('./providers/mangapill');
+const weebcentralProvider = tryReq('./providers/weebcentral');
+const comickProvider = tryReq('./providers/comick');
+const mangafireProvider = tryReq('./providers/mangafire');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,13 +38,11 @@ app.use((req,res,next)=>{
   next();
 });
 
-const providers = {
-  mangadex: mangadexProvider,
-  mangapill: mangapillProvider,
-  weebcentral: weebcentralProvider,
-  comick: comickProvider,
-  mangafire: mangafireProvider
-};
+const providers = {};
+[
+  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['weebcentral', weebcentralProvider],
+  ['comick', comickProvider], ['mangafire', mangafireProvider]
+].forEach(([k, v]) => { if (v) providers[k] = v; });
 
 // Helper to get provider
 function getProvider(id){
@@ -59,14 +58,16 @@ app.get('/api/health', (req,res)=>{
 
 // ---------- PROVIDERS LIST ----------
 app.get('/api/providers', (req,res)=>{
+  const all = [
+    { id:'mangadex', name:'MangaDex', type:'Official API', desc:'Direct public API' },
+    { id:'comick', name:'ComicK', type:'Official API', desc:'Fast API fallback' },
+    { id:'mangapill', name:'MangaPill', type:'Scraper', desc:'Cheerio scraper' },
+    { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Large manhwa library' },
+    { id:'mangafire', name:'MangaFire', type:'Scraper (CF)', desc:'Cloudflare protected' }
+  ];
   res.json({
-    providers: [
-      { id:'mangadex', name:'MangaDex', type:'Official API', native:true, status:'working', desc:'Direct public API' },
-      { id:'comick', name:'ComicK', type:'Official API', native:false, status:'working', desc:'Fast API fallback' },
-      { id:'mangapill', name:'MangaPill', type:'Scraper', native:false, status:'working', desc:'Cheerio scraper' },
-      { id:'weebcentral', name:'WeebCentral', type:'Scraper', native:false, status:'working', desc:'Large manhwa library' },
-      { id:'mangafire', name:'MangaFire', type:'Scraper (CF)', native:false, status:'protected', desc:'Cloudflare protected' }
-    ]
+    providers: all.map(p => Object.assign({}, p, { status: providers[p.id] ? 'working' : 'missing' })),
+    loaded: Object.keys(providers)
   });
 });
 
