@@ -294,32 +294,6 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v8 (minimal: iframe srcs only) ----------
-app.get('/api/hindi/debug', async (req,res)=>{
-  const axios2 = require('axios');
-  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
-  const out = [];
-  async function grab(url){
-    const r = await axios2.get(url, { headers: HDRS, timeout: 12000, maxRedirects: 5, validateStatus: null });
-    return typeof r.data === 'string' ? r.data : '';
-  }
-  const epi = await grab('https://animesalttv.to/episode/naruto-1x1/');
-  const srcs = [];
-  const re = /<iframe[^>]*src="([^"]+)"/g;
-  let m;
-  while ((m = re.exec(epi)) !== null && srcs.length < 6) srcs.push(m[1].slice(0, 130));
-  const dataSrcs = (epi.match(/data-litespeed-src="[^"]{0,130}/g) || []).slice(0, 4);
-  const sr = await grab('https://animesalttv.to/?s=naruto');
-  const anire = /<a[^>]*href="(https:\/\/animesalttv\.to\/anime\/[^"]+)"[^>]*>([\s\S]{0,200}?)<\/a>/g;
-  const cards = [];
-  while ((m = anire.exec(sr)) !== null && cards.length < 4) {
-    const title = (m[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '').slice(0, 60);
-    const img = (m[2].match(/(?:data-src|src)="([^"]+)"/) || [])[1] || '';
-    cards.push({ href: m[1].slice(0, 90), t: title, img: img.slice(0, 100) });
-  }
-  res.json({ ok: true, epiLen: epi.length, iframeSrcs: srcs, dataSrcs: dataSrcs, flags: { aao: epi.indexOf('aa-options') >= 0, vo: epi.indexOf('video-options') >= 0, player: epi.indexOf('class="video player') >= 0, ebt: epi.indexOf('episode_by_temp') >= 0 }, cards: cards });
-});
-
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
 app.get('/api/proxy/image', async (req,res)=>{
   const url = req.query.url;
