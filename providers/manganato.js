@@ -3,7 +3,9 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
-// readmanganato serves an incomplete TLS chain to datacenter clients -> tolerate it
+// readmanganato + redirect targets serve incomplete TLS chains to datacenter clients
+// hammer: disable TLS verification for this scraper backend (public read-only scraping)
+try { process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; } catch(e){}
 const AGENT = new https.Agent({ rejectUnauthorized: false });
 const BASE = 'https://manganato.com';
 const READ = 'https://readmanganato.com';
@@ -19,11 +21,35 @@ function stripHost(u){
 
 async function search(q, opts){
   if (q) {
-    const r = await axios.post(`${READ}/getstorysearchjson`, 'searchword=' + encodeURIComponent(q), {
+    let r;
+    try {
+    r = await axios.post(`${READ}/getstorysearchjson`, 'searchword=' + encodeURIComponent(q), {
       headers: Object.assign({}, H, { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
       httpsAgent: AGENT,
       timeout: 20000
     });
+    } catch(e){
+      // fallback: HTML search on manganato.com
+      try {
+        const r2 = await axios.get(`${BASE}/search/story/` + encodeURIComponent(String(q).toLowerCase().replace(/[^a-z0-9]+/g, '_')), { headers: H, httpsAgent: AGENT, timeout: 25000 });
+        const $ = cheerio.load(r2.data);
+        const out2 = [];
+        const seen2 = {};
+        $('a[href*="/manga-"]').each((i, el) => {
+          const a = $(el);
+          const id = stripHost(a.attr('href'));
+          if (!id || seen2[id]) return;
+          const t = a.attr('title') || a.text().replace(/\s+/g, ' ').trim();
+          if (!t || t.length < 2) return;
+          seen2[id] = 1;
+          const img = a.find('img').first();
+          out2.push({ id: id, title: t, coverUrl: (img.attr('src') || img.attr('data-src') || '').replace(/^\/\//, 'https://') || null, description: '' });
+        });
+        return out2.slice(0, 24);
+      } catch(e2){
+        throw new Error('MNv3 json:' + (e && e.message) + ' html:' + (e2 && e2.message));
+      }
+    }
     const list = Array.isArray(r.data) ? r.data : [];
     const out = [];
     const seen = {};
