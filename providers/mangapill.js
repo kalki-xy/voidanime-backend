@@ -77,12 +77,30 @@ async function getChapters(id){
 }
 
 async function getPages(chapterId){
-  const $ = await get(BASE + '/chapters/' + String(chapterId).replace(/^\/+/, ''));
+  const url = BASE + '/chapters/' + String(chapterId).replace(/^\/+/, '');
+  const $ = await get(url);
   const pages = [];
   $('img').each((i, el) => {
     const s = absImg($(el).attr('data-src') || $(el).attr('src'));
     if(s && /mangapill/i.test(s)) pages.push(s);
   });
+  if (pages.length) return pages;
+  // fallback: scan the RAW html for image URLs (lazy-loaded / JS-embedded readers)
+  const raw = $.html() || '';
+  const re = /https?:\/\/[^"'\s\\)]+?\.(?:webp|jpe?g|png)(?:\?[^"'\s\\)]*)?/gi;
+  const seen = {};
+  let m;
+  while ((m = re.exec(raw))){
+    const u = m[0];
+    if (/logo|icon|favicon|avatar|banner|\/i\/\d+\.webp/i.test(u)) continue; // covers/logo
+    if (seen[u]) continue;
+    seen[u] = 1;
+    pages.push(u);
+  }
+  if (!pages.length){
+    const sample = (raw.match(/https?:\/\/[^"'\s\\)]{10,90}/g) || []).slice(0, 6).join(' | ');
+    throw new Error('MPpages-debug no imgs; urls: ' + sample);
+  }
   return pages;
 }
 
