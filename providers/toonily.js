@@ -40,7 +40,7 @@ async function search(q){
   const html = await get(BASE + '/?s=' + encodeURIComponent(q) + '&post_type=wp-manga');
   const out = [];
   const seen = {};
-  // Madara search rows: each result block has <h3 class="h5"><a href=".../webtoon/slug/">Title</a> and a cover <img>
+  // Madara search rows: each result block has Title and a cover 
   const blocks = html.split(/(?=<div[^>]+class="[^"]*(?:page-item-detail|c-tabs-item__content)[^"]*")/);
   for (const b of blocks){
     const m = b.match(/<h3[^>]*class="[^"]*h5[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
@@ -120,7 +120,7 @@ async function getPages(chapterId){
     if(/logo|banner|avatar|favicon/i.test(src)) continue;
     if(urls.indexOf(src) < 0) urls.push(src);
   }
-  // if the page used generic <img> tags without classes, filter to wp-content/uploads
+  // if the page used generic  tags without classes, filter to wp-content/uploads
   const filtered = urls.filter(u => u.indexOf('wp-content/uploads') >= 0 || u.indexOf('cdn') >= 0);
   const out = filtered.length >= 3 ? filtered : urls;
   if(!out.length) throw new Error('no images found for ' + p);
