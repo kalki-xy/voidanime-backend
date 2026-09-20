@@ -294,33 +294,22 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v4 (temporary: series page structure) ----------
+// ---------- HINDI DEBUG v5 (justanime core API test) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
-  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
+  const HDRS = { 'Accept': 'application/json, text/plain, */*', 'Origin': 'https://justanime.to', 'Referer': 'https://justanime.to/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36' };
   const out = [];
-  async function grab(url){
-    const r = await axios2.get(url, { headers: HDRS, timeout: 12000, maxRedirects: 5, validateStatus: null });
-    return typeof r.data === 'string' ? r.data : '';
-  }
-  for (const d of ['animesalt.ro','animesalttv.to']) {
+  const urls = [
+    'https://core.justanime.to/api/watch/20/episode/1/megaplay',
+    'https://core.justanime.to/api/watch/20/episode/1/animegg'
+  ];
+  for (const u of urls) {
     try {
-      const body = await grab('https://' + d + '/anime/naruto/');
-      const hrefs = [];
-      const re = /href="([^"]*)"/g;
-      let m;
-      while ((m = re.exec(body)) !== null && hrefs.length < 14) {
-        const h = m[1];
-        if (/(episode|watch|season|temporada|capitulo|chapter|\?p=)/i.test(h) && hrefs.indexOf(h) < 0) hrefs.push(h.slice(0, 110));
-      }
-      const iframes = (body.match(/<iframe[^>]*src="[^"]{0,120}/g) || []).slice(0, 5);
-      const low = body.toLowerCase();
-      let k = low.indexOf('episode');
-      if (k < 0) k = low.indexOf('temporada');
-      const sample = k >= 0 ? body.slice(Math.max(0, k - 200), k + 700).replace(/\s+/g, ' ') : '';
-      out.push({ d: d, len: body.length, hrefs: hrefs, iframes: iframes, sample: sample });
+      const r = await axios2.get(u, { headers: HDRS, timeout: 12000, validateStatus: null });
+      const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+      out.push({ u: u.replace('https://core.justanime.to',''), st: r.status, body: body.slice(0, 1500) });
     } catch (e) {
-      out.push({ d: d, err: String(e.message || e).slice(0, 80) });
+      out.push({ u: u, err: String(e.message || e).slice(0, 80) });
     }
   }
   res.json({ ok: true, out: out });
