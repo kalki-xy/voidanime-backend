@@ -294,32 +294,85 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v9 (megaplay embed JS discovery) ----------
-app.get('/api/hindi/debug', async (req,res)=>{
-  const axios2 = require('axios');
-  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Referer': 'https://animesalttv.to/', 'Accept-Language': 'en-US,en;q=0.9' };
-  const out = [];
+// ---------- HINDI WATCH (justanime core — real English sub/dub sources) ----------
+app.get('/api/hindi/watch', async (req,res)=>{
+  const anilistId = req.query.anilistId || req.query.id;
+  const ep = parseInt(req.query.ep || '1', 10) || 1;
+  if(!anilistId) return res.status(400).json({ ok:false, error:'anilistId required' });
+  const cacheKey = 'jaw:' + anilistId + ':' + ep;
+  const cached = cache.get(cacheKey);
+  if(cached) return res.json(cached);
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Origin': 'https://justanime.to/', 'Referer': 'https://justanime.to/' };
+  const found = { sub: [], dub: [] };
+  for (const sv of ['megaplay', 'animegg']) {
+    try {
+      const r = await axios.get('https://core.justanime.to/api/watch/' + encodeURIComponent(anilistId) + '/episode/' + ep + '/' + sv, { headers: HDRS, timeout: 15000 });
+      const d = r.data || {};
+      ['sub','dub'].forEach(function(k){
+        let arr = [];
+        if (d[k] && Array.isArray(d[k].sources)) arr = d[k].sources;
+        else if (Array.isArray(d[k])) arr = d[k];
+        arr.forEach(function(x){
+          if (x && x.url) {
+            const isM3U8 = !!(x.isM3U8 || (String(x.url).indexOf('.m3u8') >= 0));
+            found[k].push({ url: x.url, isM3U8: isM3U8, quality: x.quality || null, type: isM3U8 ? 'hls' : 'mp4', server: sv, subtitles: (d[k] && d[k].subtitles) || x.subtitles || [] });
+          }
+        });
+      });
+    } catch (e) { /* try next server */ }
+  }
+  const payload = { ok: (found.sub.length + found.dub.length) > 0, sub: found.sub, dub: found.dub };
+  cache.set(cacheKey, payload, 300);
+  res.json(payload);
+});
+
+// ---------- HINDI MEDIA PROXY (m3u8 rewrite + stream pipe with CORS + referer) ----------
+const MEDIA_REFERS = { animesalt: 'https://animesalttv.to/', megaplay: 'https://megaplay.buzz/', animegg: 'https://www.animegg.org/', justanime: 'https://justanime.to/' };
+function mediaProx(u, rk){ return '/api/hindi/media?u=' + encodeURIComponent(u) + '&r=' + rk; }
+app.get('/api/hindi/media', async (req,res)=>{
+  const u = req.query.u;
+  const rk = MEDIA_REFERS[req.query.r] ? req.query.r : 'animesalt';
+  if(!u || String(u).indexOf('http') !== 0) return res.status(400).send('u required');
   try {
-    const r = await axios2.get('https://vid.megaplay.su/e/1ad7af7fdeb9e1d0e66c9ef048829971863350290eb47840?lang=hindi', { headers: HDRS, timeout: 12000, validateStatus: null });
-    const body = typeof r.data === 'string' ? r.data : '';
-    const urls = [];
-    let pos = 0;
-    while (urls.length < 15) {
-      const k = body.indexOf('http', pos);
-      if (k < 0) break;
-      const end = Math.min(k + 160, body.length);
-      const chunk = body.slice(k, end);
-      const stop = Math.min.apply(null, [chunk.indexOf(' '), chunk.indexOf('"'), chunk.indexOf("'"), chunk.indexOf(')')].filter(function(x){ return x >= 0; }).concat([chunk.length]));
-      const u = chunk.slice(0, stop);
-      if (u.length > 8 && urls.indexOf(u) < 0) urls.push(u);
-      pos = k + 4;
+    const isM3u8 = String(u).indexOf('.m3u8') >= 0;
+    const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Referer': MEDIA_REFERS[rk], 'Accept': '*/*' };
+    if (req.headers.range) headers['Range'] = req.headers.range;
+    const r = await axios.get(u, { headers: headers, timeout: 25000, responseType: isM3u8 ? 'text' : 'stream', maxRedirects: 5, validateStatus: null });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (isM3u8) {
+      const base = String(u);
+      const lines = String(r.data).split('\n');
+      const outL = [];
+      for (let ln of lines) {
+        if (ln.indexOf('\r') >= 0) ln = ln.split('\r')[0];
+        if (!ln) { outL.push(''); continue; }
+        if (ln.charAt(0) === '#') {
+          const qi = ln.indexOf('URI="');
+          if (qi >= 0) {
+            const end = ln.indexOf('"', qi + 5);
+            const inner = ln.slice(qi + 5, end);
+            let abs = inner;
+            try { abs = new URL(inner, base).href; } catch (e2) {}
+            ln = ln.slice(0, qi) + 'URI="' + mediaProx(abs, rk) + '"' + ln.slice(end + 1);
+          }
+          outL.push(ln);
+        } else {
+          let abs2 = ln;
+          try { abs2 = new URL(ln, base).href; } catch (e3) {}
+          outL.push(mediaProx(abs2, rk));
+        }
+      }
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      res.status(r.status === 200 ? 200 : r.status).send(outL.join('\n'));
+    } else {
+      res.setHeader('Content-Type', r.headers['content-type'] || 'video/mp4');
+      if (r.headers['content-length']) res.setHeader('Content-Length', r.headers['content-length']);
+      if (r.headers['accept-ranges']) res.setHeader('Accept-Ranges', r.headers['accept-ranges']);
+      if (r.headers['content-range']) res.setHeader('Content-Range', r.headers['content-range']);
+      res.status(r.status);
+      r.data.pipe(res);
     }
-    const scripts = (body.split('<script').length - 1);
-    const mk = body.indexOf('m3u8');
-    const snip = mk >= 0 ? body.slice(Math.max(0, mk - 200), mk + 100) : '';
-    out.push({ st: r.status, len: body.length, scripts: scripts, urls: urls, m3u8snip: snip });
-  } catch (e) { out.push({ err: String(e.message || e).slice(0, 100) }); }
-  res.json({ ok: true, out: out });
+  } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
 });
 
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
