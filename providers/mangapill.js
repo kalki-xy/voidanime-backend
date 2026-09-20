@@ -34,6 +34,9 @@ async function search(q){
     let title = ($el.attr('title') || '').trim();
     if(!title && img.length) title = (img.attr('alt') || '').trim();
     if(!title) title = $el.text().replace(/\s+/g, ' ').split('  ')[0].trim();
+    title = title.replace(/\s+/g, ' ').trim();
+    const half = title.length / 2;
+    if(half % 1 === 0 && half > 3 && title.slice(0, half) === title.slice(half)) title = title.slice(0, half).trim();
     const cover = absImg(img.attr('data-src') || img.attr('data-original') || img.attr('src'));
     out.push({ id: m[2] ? m[1] + '/' + m[2] : m[1], title: title || ('Manga ' + m[1]), coverUrl: cover });
   });
