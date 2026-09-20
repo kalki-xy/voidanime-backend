@@ -294,22 +294,37 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v5 (justanime core API test) ----------
+// ---------- HINDI DEBUG v6 (episode mechanism discovery) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
-  const HDRS = { 'Accept': 'application/json, text/plain, */*', 'Origin': 'https://justanime.to', 'Referer': 'https://justanime.to/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36' };
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
   const out = [];
-  const urls = [
-    'https://core.justanime.to/api/watch/20/episode/1/megaplay',
-    'https://core.justanime.to/api/watch/20/episode/1/animegg'
-  ];
-  for (const u of urls) {
+  async function grab(url){
+    const r = await axios2.get(url, { headers: HDRS, timeout: 12000, maxRedirects: 5, validateStatus: null });
+    return typeof r.data === 'string' ? r.data : '';
+  }
+  for (const d of ['animesalttv.to','animesalt.me','animesalt.ro']) {
     try {
-      const r = await axios2.get(u, { headers: HDRS, timeout: 12000, validateStatus: null });
-      const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
-      out.push({ u: u.replace('https://core.justanime.to',''), st: r.status, body: body.slice(0, 1500) });
+      const body = await grab('https://' + d + '/anime/naruto/');
+      const epiHrefs = [];
+      const re = /href="([^"]*)"/g;
+      let m;
+      while ((m = re.exec(body)) !== null && epiHrefs.length < 10) {
+        const h = m[1];
+        if (/(episode|ep-|-ep\/|capitulo|watch|player|\bep\d)/i.test(h) && epiHrefs.indexOf(h) < 0) epiHrefs.push(h.slice(0, 100));
+      }
+      const ajaxHits = [];
+      let idx = 0;
+      while (ajaxHits.length < 3) {
+        const k = body.toLowerCase().indexOf('ajax', idx);
+        if (k < 0) break;
+        idx = k + 4;
+        ajaxHits.push(body.slice(Math.max(0, k - 120), k + 180).replace(/\s+/g, ' '));
+      }
+      const rest = body.indexOf('wp-json') >= 0 || body.indexOf('rest_route') >= 0;
+      out.push({ d: d, len: body.length, epiHrefs: epiHrefs, ajax: ajaxHits, rest: rest });
     } catch (e) {
-      out.push({ u: u, err: String(e.message || e).slice(0, 80) });
+      out.push({ d: d, err: String(e.message || e).slice(0, 80) });
     }
   }
   res.json({ ok: true, out: out });
