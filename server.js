@@ -302,17 +302,22 @@ app.get('/api/hindi/debug', async (req,res)=>{
   try {
     const r = await axios2.get('https://vid.megaplay.su/e/1ad7af7fdeb9e1d0e66c9ef048829971863350290eb47840?lang=hindi', { headers: HDRS, timeout: 12000, validateStatus: null });
     const body = typeof r.data === 'string' ? r.data : '';
-    const m3u8 = (body.match(/[a-zA-Z0-9:./_?=&-]*m3u8[a-zA-Z0-9:./_?=&-]*/g) || []).slice(0, 5);
-    const apis = (body.match(/["'\\/]?(?:https?:\\/\\/[^"'\\s]+)?\\/api\\/[a-zA-Z0-9/_-]+/g) || []).slice(0, 8);
-    const sources = [];
-    let idx = 0;
-    while (sources.length < 3) {
-      const k = body.toLowerCase().indexOf('source', idx);
+    const urls = [];
+    let pos = 0;
+    while (urls.length < 15) {
+      const k = body.indexOf('http', pos);
       if (k < 0) break;
-      idx = k + 6;
-      sources.push(body.slice(Math.max(0, k - 150), k + 250).replace(/\\s+/g, ' '));
+      const end = Math.min(k + 160, body.length);
+      const chunk = body.slice(k, end);
+      const stop = Math.min.apply(null, [chunk.indexOf(' '), chunk.indexOf('"'), chunk.indexOf("'"), chunk.indexOf(')')].filter(function(x){ return x >= 0; }).concat([chunk.length]));
+      const u = chunk.slice(0, stop);
+      if (u.length > 8 && urls.indexOf(u) < 0) urls.push(u);
+      pos = k + 4;
     }
-    out.push({ st: r.status, len: body.length, m3u8: m3u8, apis: apis, sources: sources });
+    const scripts = (body.split('<script').length - 1);
+    const mk = body.indexOf('m3u8');
+    const snip = mk >= 0 ? body.slice(Math.max(0, mk - 200), mk + 100) : '';
+    out.push({ st: r.status, len: body.length, scripts: scripts, urls: urls, m3u8snip: snip });
   } catch (e) { out.push({ err: String(e.message || e).slice(0, 100) }); }
   res.json({ ok: true, out: out });
 });
@@ -338,7 +343,7 @@ app.get('/api/proxy/image', async (req,res)=>{
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': referer,
-        'Accept': 'image/avq/image/webp,image/apng,image/*,*/*;q=0.8'
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
       },
       timeout: 15000
     });
