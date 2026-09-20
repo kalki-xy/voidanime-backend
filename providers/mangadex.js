@@ -33,19 +33,26 @@ async function search(q, opts){
 async function chapterList(id){
   // FULL list: paginate the feed until exhausted (500 per page, hard cap 5000)
   const out = [];
+  const seenNum = {};
   let offset = 0;
   while (true){
     const r = await axios.get(`${API}/manga/${id}/feed`, {
-      params: { limit: 500, offset, 'translatedLanguage[]': 'en', 'order[chapter]': 'asc' },
+      params: { limit: 500, offset, 'translatedLanguage[]': 'en', 'order[chapter]': 'asc', includeExternalUrl: '0' },
       headers: UA, timeout: 25000
     });
     const batch = r.data.data || [];
-    batch.forEach(c => out.push({
-      id: c.id,
-      number: c.attributes.chapter || null,
-      title: c.attributes.title || '',
-      date: c.attributes.publishAt || null
-    }));
+    batch.forEach(c => {
+      if (c.attributes && c.attributes.isUnavailable === true) return; // bugged/unreadable entries
+      const num = c.attributes.chapter || null;
+      if (num != null && seenNum['n' + num]) return; // multiple groups per number -> keep first
+      seenNum['n' + num] = 1;
+      out.push({
+        id: c.id,
+        number: num,
+        title: c.attributes.title || '',
+        date: c.attributes.publishAt || null
+      });
+    });
     if (batch.length < 500 || out.length >= 5000) break;
     offset += 500;
   }
@@ -84,9 +91,14 @@ async function getPagesByNumber(id, chapterNumber, chapterId){
   if (chapterNumber == null) throw new Error('chapterId or chapterNumber required');
   const chapters = await chapterList(id);
   const target = String(chapterNumber);
-  const ch = chapters.find(c => String(c.number) === target);
-  if (!ch) throw new Error('chapter not found: ' + target);
-  return getPages(ch.id);
+  const matches = chapters.filter(c => String(c.number) === target);
+  if (!matches.length) throw new Error('chapter not found: ' + target);
+  let err = null;
+  for (const ch of matches){ // an entry may 404 (unavailable) -> try the next group's copy
+    try { return await getPages(ch.id); }
+    catch (e) { err = e; }
+  }
+  throw err;
 }
 
 module.exports = { search, getInfo, getChapters, getPages, getPagesByNumber };
