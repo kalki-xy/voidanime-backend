@@ -4,13 +4,12 @@ const axios = require('axios');
 const NodeCache = require('node-cache');
 const path = require('path');
 
-// Tolerant loading: backend boots even if some provider files are missing
-function tryReq(p){ try { return require(p); } catch(e){ console.warn('[provider] not loaded:', p, '-', e.message); return null; } }
-const mangadexProvider = tryReq('./providers/mangadex');
-const mangapillProvider = tryReq('./providers/mangapill');
-const weebcentralProvider = tryReq('./providers/weebcentral');
-const comickProvider = tryReq('./providers/comick');
-const mangafireProvider = tryReq('./providers/mangafire');
+// Plain top-level requires so @vercel/node (ncc) bundles them — placeholder stubs keep missing ones loadable
+const mangadexProvider = require('./providers/mangadex');
+const mangapillProvider = require('./providers/mangapill');
+const weebcentralProvider = require('./providers/weebcentral');
+const comickProvider = require('./providers/comick');
+const mangafireProvider = require('./providers/mangafire');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -44,11 +43,12 @@ const providers = {};
   ['comick', comickProvider], ['mangafire', mangafireProvider]
 ].forEach(([k, v]) => { if (v) providers[k] = v; });
 
-// Helper to get provider
+// Helper to get provider (stubs fall back to the first real provider)
 function getProvider(id){
-  if(!id) return providers.mangadex;
-  const key = String(id).toLowerCase();
-  return providers[key] || providers.mangadex;
+  const key = String(id||'').toLowerCase();
+  let p = providers[key] || providers.mangadex;
+  if (p && p.__stub && providers.mangadex && !providers.mangadex.__stub) p = providers.mangadex;
+  return p;
 }
 
 // ---------- HEALTH ----------
@@ -66,7 +66,7 @@ app.get('/api/providers', (req,res)=>{
     { id:'mangafire', name:'MangaFire', type:'Scraper (CF)', desc:'Cloudflare protected' }
   ];
   res.json({
-    providers: all.map(p => Object.assign({}, p, { status: providers[p.id] ? 'working' : 'missing' })),
+    providers: all.map(p => Object.assign({}, p, { status: providers[p.id] ? (providers[p.id].__stub ? 'placeholder' : 'working') : 'missing' })),
     loaded: Object.keys(providers)
   });
 });
