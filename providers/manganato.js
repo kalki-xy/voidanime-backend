@@ -2,6 +2,9 @@
 // id format: 'manga-xxxx' ; chapter id format: 'manga-xxxx/chapter-y'
 const axios = require('axios');
 const cheerio = require('cheerio');
+const https = require('https');
+// readmanganato serves an incomplete TLS chain to datacenter clients -> tolerate it
+const AGENT = new https.Agent({ rejectUnauthorized: false });
 const BASE = 'https://manganato.com';
 const READ = 'https://readmanganato.com';
 const H = {
@@ -18,6 +21,7 @@ async function search(q, opts){
   if (q) {
     const r = await axios.post(`${READ}/getstorysearchjson`, 'searchword=' + encodeURIComponent(q), {
       headers: Object.assign({}, H, { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
+      httpsAgent: AGENT,
       timeout: 20000
     });
     const list = Array.isArray(r.data) ? r.data : [];
@@ -33,7 +37,7 @@ async function search(q, opts){
     return out.slice(0, 24);
   }
   // browse: genre-all page
-  const r = await axios.get(`${BASE}/genre-all`, { headers: H, timeout: 25000 });
+  const r = await axios.get(`${BASE}/genre-all`, { headers: H, httpsAgent: AGENT, timeout: 25000 });
   const $ = cheerio.load(r.data);
   const out = [];
   const seen = {};
@@ -51,7 +55,7 @@ async function search(q, opts){
 }
 
 async function fetchMangaPage(id){
-  return axios.get(`${READ}/${stripHost(id)}`, { headers: H, timeout: 30000 });
+  return axios.get(`${READ}/${stripHost(id)}`, { headers: H, httpsAgent: AGENT, timeout: 30000 });
 }
 
 function parseChapters($){
@@ -86,7 +90,7 @@ async function getChapters(id){
 }
 
 async function getPages(chapterId){
-  const r = await axios.get(`${READ}/${stripHost(chapterId)}`, { headers: H, timeout: 30000 });
+  const r = await axios.get(`${READ}/${stripHost(chapterId)}`, { headers: H, httpsAgent: AGENT, timeout: 30000 });
   const $ = cheerio.load(r.data);
   const out = [];
   $('.container-chapter-reader img').each((i, el) => {
