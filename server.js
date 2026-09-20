@@ -10,6 +10,7 @@ const mangapillProvider = require('./providers/mangapill');
 const manganatoProvider = require('./providers/manganato');
 const toonilyProvider = require('./providers/toonily');
 const mangataroProvider = require('./providers/mangataro');
+const animesaltProvider = require('./providers/animesalt');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -61,8 +62,6 @@ app.get('/api/providers', (req,res)=>{
     { id:'mangadex', name:'MangaDex', type:'Official API', desc:'Direct public API' },
     { id:'mangapill', name:'MangaPill', type:'Scraper', desc:'Cheerio scraper' },
     { id:'manganato', name:'Manganato', type:'Scraper', desc:'Huge library, fast' },
-    { id:'toonily', name:'Toonily', type:'Scraper', desc:'Full manhwa library (Madara)' },
-    { id:'mangataro', name:'MangaTaro', type:'JSON API', desc:'Full manhwa library' },
     { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Blocked: Cloudflare 403' },
     { id:'mangafire', name:'MangaFire', type:'Scraper', desc:'Blocked: Cloudflare' },
     { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' }
@@ -244,6 +243,55 @@ app.get('/api/mangadex/at-home/server/:chapterId', async (req,res)=>{
     const pages = await mangadexProvider.getPages(req.params.chapterId);
     res.json({ pages });
   }catch(e){ res.status(500).json({ error:e.message }); }
+});
+
+// ---------- HINDI DUB ROUTES (AnimeSalt network — Hindi/Tamil/Telugu anime + movies) ----------
+app.get('/api/hindi/search', async (req,res)=>{
+  const q = req.query.q || req.query.title || '';
+  if(!q) return res.status(400).json({ ok:false, error:'q required' });
+  try{
+    const results = await animesaltProvider.search(q);
+    res.json({ ok:true, results: results, data: results });
+  }catch(e){ console.error('hindi search error', e.message); res.status(502).json({ ok:false, error:e.message }); }
+});
+
+app.get('/api/hindi/series', async (req,res)=>{
+  const id = req.query.id;
+  if(!id) return res.status(400).json({ ok:false, error:'id required' });
+  try{
+    const data = await animesaltProvider.getInfo(id);
+    res.json({ ok:true, data: data });
+  }catch(e){ console.error('hindi series error', e.message); res.status(502).json({ ok:false, error:e.message }); }
+});
+
+app.get('/api/hindi/episodes', async (req,res)=>{
+  const id = req.query.id;
+  const season = parseInt(req.query.season||'1',10)||1;
+  if(!id) return res.status(400).json({ ok:false, error:'id required' });
+  try{
+    const data = await animesaltProvider.episodes(id, season);
+    res.json({ ok:true, data: data });
+  }catch(e){ console.error('hindi episodes error', e.message); res.status(502).json({ ok:false, error:e.message }); }
+});
+
+app.get('/api/hindi/streams', async (req,res)=>{
+  const id = req.query.id;
+  const season = parseInt(req.query.season||'1',10)||1;
+  const ep = parseInt(req.query.ep||'1',10)||1;
+  if(!id) return res.status(400).json({ ok:false, error:'id required' });
+  try{
+    const servers = await animesaltProvider.streams(id, season, ep);
+    res.json({ ok:true, servers: servers, data: servers });
+  }catch(e){ console.error('hindi streams error', e.message); res.status(502).json({ ok:false, error:e.message }); }
+});
+
+app.get('/api/hindi/movie', async (req,res)=>{
+  const id = req.query.id;
+  if(!id) return res.status(400).json({ ok:false, error:'id required' });
+  try{
+    const data = await animesaltProvider.movie(id);
+    res.json({ ok:true, data: data });
+  }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
