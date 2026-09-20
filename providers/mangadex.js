@@ -4,6 +4,21 @@ const API = 'https://api.mangadex.org';
 const UA = { 'User-Agent': 'VoidAnime-Backend/1.0 (manga reader)' };
 
 function titleOf(t){ return (t && (t.en || Object.values(t).find(Boolean))) || 'Untitled'; }
+function dispTitle(m){
+  const t = (m.attributes && m.attributes.title) || {};
+  const alts = (m.attributes && m.attributes.altTitles) || [];
+  const altEn = (alts.find(a => a.en) || {}).en;
+  if (t.en) return t.en;
+  if (altEn) return altEn; // many manhwa/manhua list a romaji primary title but carry the EN title in altTitles
+  return titleOf(t);
+}
+function altsOf(m){
+  const out = [];
+  const push = v => { if (v && out.indexOf(v) < 0) out.push(v); };
+  Object.values((m.attributes && m.attributes.title) || {}).forEach(push);
+  ((m.attributes && m.attributes.altTitles) || []).forEach(a => Object.values(a).forEach(push));
+  return out;
+}
 function descOf(d){ const s = d && (d.en || Object.values(d).find(Boolean)); return s ? String(s).replace(/<[^>]*>/g, '').slice(0, 400) : ''; }
 function coverOf(m){
   const rel = (m.relationships || []).find(r => r.type === 'cover_art');
@@ -24,7 +39,8 @@ async function search(q, opts){
   const r = await axios.get(`${API}/manga?${qs.toString()}`, { headers: UA, timeout: 15000 });
   return r.data.data.map(m => ({
     id: m.id,
-    title: titleOf(m.attributes.title),
+    title: dispTitle(m),
+    alt: altsOf(m),
     coverUrl: coverOf(m),
     description: descOf(m.attributes.description)
   }));
