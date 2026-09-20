@@ -25,24 +25,37 @@ async function comicBySlug(slug){
   return r.data && r.data.comic ? r.data : null;
 }
 
+function chapterOf(c){
+  return {
+    id: c.hid,
+    number: c.chap != null ? String(c.chap) : '',
+    title: c.title || '',
+    date: c.created_at || null
+  };
+}
+
 async function chapterList(hid){
-  const all = [];
-  let page = 1;
-  while (page <= 40){
-    const r = await axios.get(`${API}/chapters/${hid}`, {
-      params: { lang: 'en', page, limit: 100, order: 'asc' },
-      headers: H, timeout: 25000
-    });
-    const batch = (r.data && r.data.chapters) || [];
-    batch.forEach(c => all.push({
-      id: c.hid,
-      number: c.chap != null ? String(c.chap) : ('' + (all.length + 1)),
-      title: c.title || '',
-      date: c.created_at || null
-    }));
-    if (batch.length < 100 || all.length >= 4000) break;
-    page++;
+  // page 1 first, then remaining pages in PARALLEL (fast enough for serverless)
+  const r1 = await axios.get(`${API}/chapters/${hid}`, {
+    params: { lang: 'en', page: 1, limit: 100, order: 'asc' },
+    headers: H, timeout: 25000
+  });
+  const d1 = r1.data || {};
+  const all = ((d1.chapters) || []).map(chapterOf);
+  const total = d1.total || d1.last_page || 0;
+  const pages = total ? Math.min(Math.ceil(total / 100) - 1, 30) : 0;
+  if (pages > 0){
+    const rest = await Promise.all(
+      Array.from({ length: pages }, (_, i) =>
+        axios.get(`${API}/chapters/${hid}`, {
+          params: { lang: 'en', page: i + 2, limit: 100, order: 'asc' },
+          headers: H, timeout: 25000
+        }).catch(() => null)
+      )
+    );
+    rest.forEach(r => { if (r && r.data && r.data.chapters) r.data.chapters.forEach(c => all.push(chapterOf(c))); });
   }
+  all.sort((a, b) => (parseFloat(a.number) || 0) - (parseFloat(b.number) || 0));
   return all;
 }
 
