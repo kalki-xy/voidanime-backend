@@ -375,23 +375,15 @@ app.get('/api/hindi/media', async (req,res)=>{
   } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
 });
 
-// ---------- HINDI DEBUG v10 (self-test media proxy + watch route) ----------
+// ---------- HINDI DEBUG v11 (raw justanime response dump) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const out = [];
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Origin': 'https://justanime.to/', 'Referer': 'https://justanime.to/', 'Accept': 'application/json, text/plain, */*' };
   try {
-    const m3u8 = 'https://vid.megaplay.su/hls/20260823_075123_1ebf6213/master.m3u8';
-    const px = 'https://voidanime-backend.vercel.app/api/hindi/media?u=' + encodeURIComponent(m3u8) + '&r=animesalt';
-    const r = await axios.get(px, { timeout: 20000, validateStatus: null });
-    const txt = typeof r.data === 'string' ? r.data : '';
-    const lines = txt.split('\n').filter(function(l){ return l && l.indexOf('EXT') !== 0; }).slice(0, 3);
-    out.push({ st: r.status, ct: (r.headers && r.headers['content-type']) || '', head: lines });
-  } catch (e) { out.push({ err: String(e.message || e).slice(0, 120) }); }
-  try {
-    const r2 = await axios.get('https://voidanime-backend.vercel.app/api/hindi/watch?anilistId=20&ep=1', { timeout: 25000, validateStatus: null });
-    const j = r2.data || {};
-    const first = function(k){ return (j[k] && j[k][0] && j[k][0].url) ? j[k][0].url.slice(0, 90) : null; };
-    out.push({ watch: true, sub: (j.sub || []).length, dub: (j.dub || []).length, subFirst: first('sub'), dubFirst: first('dub') });
-  } catch (e) { out.push({ err2: String(e.message || e).slice(0, 120) }); }
+    const r = await axios.get('https://core.justanime.to/api/watch/20/episode/1/megaplay', { headers: HDRS, timeout: 15000, validateStatus: null });
+    const raw = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+    out.push({ st: r.status, head: String(raw).slice(0, 700) });
+  } catch (e) { out.push({ err: String(e.message || e).slice(0, 140) }); }
   res.json({ ok: true, out: out });
 });
 
