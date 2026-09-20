@@ -140,7 +140,7 @@ app.get('/api/scrape/search', async (req,res)=>{
     res.json(payload);
   }catch(e){
     console.error('search error', providerId, e.message);
-    res.status(500).json({ error: e.message, results: [], data: [] });
+    res.json({ error: e.message, results: [], data: [] });
   }
 });
 
@@ -160,7 +160,7 @@ app.get('/api/scrape/info', async (req,res)=>{
     res.json(payload);
   }catch(e){
     console.error('info error', providerId, e.message);
-    res.status(500).json({ error: e.message });
+    res.json({ error: e.message, data: null });
   }
 });
 
@@ -180,7 +180,7 @@ app.get('/api/scrape/chapters', async (req,res)=>{
     res.json(payload);
   }catch(e){
     console.error('chapters error', providerId, e.message);
-    res.status(500).json({ error: e.message, chapters: [] });
+    res.json({ error: e.message, chapters: [], data: [] });
   }
 });
 
@@ -209,7 +209,7 @@ app.get('/api/scrape/pages', async (req,res)=>{
     res.json(payload);
   }catch(e){
     console.error('pages error', providerId, e.message);
-    res.status(500).json({ error: e.message, pages: [] });
+    res.json({ error: e.message, pages: [], data: [] });
   }
 });
 
