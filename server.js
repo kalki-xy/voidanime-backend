@@ -294,7 +294,7 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG v6 (episode mechanism discovery) ----------
+// ---------- HINDI DEBUG v7 (episode page player + search card markup) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
   const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9' };
@@ -303,30 +303,26 @@ app.get('/api/hindi/debug', async (req,res)=>{
     const r = await axios2.get(url, { headers: HDRS, timeout: 12000, maxRedirects: 5, validateStatus: null });
     return typeof r.data === 'string' ? r.data : '';
   }
-  for (const d of ['animesalttv.to','animesalt.me','animesalt.ro']) {
-    try {
-      const body = await grab('https://' + d + '/anime/naruto/');
-      const epiHrefs = [];
-      const re = /href="([^"]*)"/g;
-      let m;
-      while ((m = re.exec(body)) !== null && epiHrefs.length < 10) {
-        const h = m[1];
-        if (/(episode|ep-|-ep\/|capitulo|watch|player|\bep\d)/i.test(h) && epiHrefs.indexOf(h) < 0) epiHrefs.push(h.slice(0, 100));
-      }
-      const ajaxHits = [];
-      let idx = 0;
-      while (ajaxHits.length < 3) {
-        const k = body.toLowerCase().indexOf('ajax', idx);
-        if (k < 0) break;
-        idx = k + 4;
-        ajaxHits.push(body.slice(Math.max(0, k - 120), k + 180).replace(/\s+/g, ' '));
-      }
-      const rest = body.indexOf('wp-json') >= 0 || body.indexOf('rest_route') >= 0;
-      out.push({ d: d, len: body.length, epiHrefs: epiHrefs, ajax: ajaxHits, rest: rest });
-    } catch (e) {
-      out.push({ d: d, err: String(e.message || e).slice(0, 80) });
-    }
-  }
+  try {
+    const epi = await grab('https://animesalttv.to/episode/naruto-1x1/');
+    const iframes = (epi.match(/<iframe[^>]*src="[^"]{0,140}/g) || []).slice(0, 8);
+    const low = epi.toLowerCase();
+    const k = low.indexOf('player');
+    const k2 = low.indexOf('video-options');
+    const k3 = low.indexOf('aa-options');
+    let sample = '';
+    if (k3 >= 0) sample = epi.slice(Math.max(0, k3 - 100), k3 + 900);
+    else if (k2 >= 0) sample = epi.slice(Math.max(0, k2 - 100), k2 + 900);
+    else if (k >= 0) sample = epi.slice(Math.max(0, k - 100), k + 900);
+    sample = sample.replace(/\s+/g, ' ');
+    out.push({ d: 'episode-page', len: epi.length, iframes: iframes, sample: sample.slice(0, 900) });
+  } catch (e) { out.push({ d: 'episode-page', err: String(e.message || e).slice(0, 80) }); }
+  try {
+    const sr = await grab('https://animesalttv.to/?s=naruto');
+    const kk = sr.indexOf('/anime/');
+    const card = kk >= 0 ? sr.slice(Math.max(0, kk - 700), kk + 400).replace(/\s+/g, ' ') : '';
+    out.push({ d: 'search-card', len: sr.length, card: card.slice(0, 1000) });
+  } catch (e) { out.push({ d: 'search-card', err: String(e.message || e).slice(0, 80) }); }
   res.json({ ok: true, out: out });
 });
 
