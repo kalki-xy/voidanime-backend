@@ -13,7 +13,7 @@ const mangafireProvider = require('./providers/mangafire');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+const cache = new NodeCache({ stdTTL: 600, checkperiog: 120 });
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s=>s.trim());
 app.use(cors({
@@ -125,15 +125,16 @@ app.get('/api/trending', async (req,res)=>{
 
 // ---------- COMPAT: /api/scrape/search ----------
 app.get('/api/scrape/search', async (req,res)=>{
-  const q = req.query.query || req.query.q;
+  const q = req.query.query || req.query.q || '';
+  const origin = ['ja','ko','zh'].indexOf(req.query.origin) >= 0 ? req.query.origin : '';
+  const adult = String(req.query.adult) === '1';
   const providerId = req.query.provider || 'mangadex';
-  if(!q) return res.status(400).json({ error:'query required', results:[] });
-  const cacheKey = `search:${providerId}:${q.toLowerCase()}`;
+  const cacheKey = `search:${providerId}:${(q||'').toLowerCase()}:${origin}:${adult?'18':''}`;
   const cached = cache.get(cacheKey);
   if(cached) return res.json(cached);
   try{
     const provider = getProvider(providerId);
-    const results = await provider.search(q);
+    const results = await provider.search(q, { origin, adult });
     const payload = { results, data: results, items: results };
     cache.set(cacheKey, payload, 300);
     res.json(payload);
@@ -202,7 +203,7 @@ app.get('/api/scrape/pages', async (req,res)=>{
       pages = await provider.getPages(chapterId || id);
     }
     // Normalize to array of strings and array of objects
-    const flat = pages.map(p=> typeof p==='string'? p : (p.url || p.imageUrl || p.src));
+    const flat = pages.map(p=> typeof p==='string'?0p : (p.url || p.imageUrl || p.src));
     const payload = { pages: flat, data: flat, images: flat, results: pages };
     cache.set(cacheKey, payload, 600);
     res.json(payload);
@@ -226,78 +227,4 @@ app.get('/api/mangadex/manga/:id', async (req,res)=>{
   try{
     const data = await mangadexProvider.getInfo(req.params.id);
     res.json({ data });
-  }catch(e){ res.status(500).json({ error:e.message }); }
-});
-
-app.get('/api/mangadex/manga/:id/feed', async (req,res)=>{
-  try{
-    const chapters = await mangadexProvider.getChapters(req.params.id);
-    res.json({ chapters, data: chapters });
-  }catch(e){ res.status(500).json({ error:e.message }); }
-});
-
-app.get('/api/mangadex/at-home/server/:chapterId', async (req,res)=>{
-  try{
-    const pages = await mangadexProvider.getPages(req.params.chapterId);
-    res.json({ pages });
-  }catch(e){ res.status(500).json({ error:e.message }); }
-});
-
-// ---------- IMAGE PROXY (critical for VoidAnime style) ----------
-app.get('/api/proxy/image', async (req,res)=>{
-  const url = req.query.url;
-  if(!url) return res.status(400).send('url required');
-  try{
-    // Determine referer based on domain
-    let referer = 'https://mangadex.org/';
-    if(url.includes('mangapill')) referer = 'https://mangapill.com/';
-    if(url.includes('weebcentral')) referer = 'https://weebcentral.com/';
-    if(url.includes('mangafire')) referer = 'https://mangafire.to/';
-    if(url.includes('comick')) referer = 'https://comick.io/';
-    if(url.includes('mangadex')) referer = 'https://mangadex.org/';
-
-    const response = await axios.get(url, {
-      responseType: 'stream',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': referer,
-        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-      },
-      timeout: 15000
-    });
-    const contentType = response.headers['content-type'] || 'image/jpeg';
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    response.data.pipe(res);
-  }catch(e){
-    console.error('proxy error', e.message, url);
-    // Fallback: redirect to original
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Root
-app.get('/', (req,res)=>{
-  res.send(`
-    <h1>VoidAnime Backend is Running</h1>
-    <p>Providers: ${Object.keys(providers).join(', ')}</p>
-    <ul>
-      <li><a href="/api/health">/api/health</a></li>
-      <li><a href="/api/providers">/api/providers</a></li>
-      <li><a href="/api/trending">/api/trending</a></li>
-      <li>/api/scrape/search?query=naruto&provider=mangadex</li>
-      <li>/api/scrape/info?id=&provider=mangadex</li>
-      <li>/api/scrape/pages?id=&chapterNumber=&provider=mangadex</li>
-      <li>/api/proxy/image?url=...</li>
-    </ul>
-  `);
-});
-
-module.exports = app;
-
-// Local run only (Vercel uses module.exports above)
-if (!process.env.VERCEL) app.listen(PORT, ()=>{
-  console.log(`VoidAnime backend listening on http://localhost:${PORT}`);
-  console.log(`Providers: ${Object.keys(providers).join(', ')}`);
-});
+  }catch(e){ r–ç7FGW2ƒS’æ§6öâ‡²W'&÷#¦RæÖW76vRÒ“²Ð§Ò“° ¦ævWB‚rö’öÖævFW‚öÖævó¦–BöfVVBrÂ7–æ2‡&WÇ&W2“Óç°¢G'—°¢6öç7B6†FW'2Òv—BÖævFW…&÷f–FW"ævWD6†FW'2‡&Wç&×2æ–B“°¢&W2æ§6öâ‡²6†FW'2ÂFF¢6†FW'2Ò“°¢Ö6F6‚†R—²&W2ç7FGW2ƒS’æ§6öâ‡²W'&÷#¦RæÖW76vRÒ“²Ð§Ò“° ¦ævWB‚rö’öÖævFW‚öBÖ†öÖR÷6W'fW"ó¦6†FW$–BrÂ7–æ2‡&WÇ&W2“Óç°¢G'—°¢6öç7BvW2Òv—BÖævFW…&÷f–FW"ævWEvW2‡&Wç&×2æ6†FW$–B“°¢&W2æ§6öâ‡²vW2Ò“°¢Ö6F6‚†R—²&W72ç7FGW2ƒS’æ§6öâ‡²W'&÷#¦RæÖW76vRÒ“²Ð§Ò“° ¢òòÒÒÒÒÒÒÒÒÒÒ”ÔtR$õ…’†7&—F–6Âf÷"fö–Dæ–ÖR7G–ÆR’ÒÒÒÒÒÒÒÒÒÐ¦ævWB‚rö’÷&÷‡’ö–ÖvRrÂ7–æ2‡&WÇ&W2“Óç°¢6öç7BW&ÂÒ&WçVW'’çW&Ã°¢–b‚W&Â’&WGW&â&W2ç7FGW2ƒC’ç6VæB‚wW&Â&WV—&VBr“°¢G'—°¢òòFWFW&Ö–æR&VfW&W"&6VBöâFöÖ–à¢ÆWB&VfW&W"Òv‡GG3¢òöÖævFW‚æ÷&ròs°¢–b‡W&Âæ–æ6ÇVFW2‚vÖæv–ÆÂr’’&VfW&W"Òv‡GG3¢òöÖæv–ÆÂæ6öÒòs°¢–b‡W&Âæ–æ6ÇVFW2‚wvVV&6VçG&Âr’’&VfW&W"Òv‡GG3¢ò÷vVV&6VçG&Âæ6öÒòs°¢–b‡W&Âæ–æ6ÇVFW2‚vÖævf—&Rr’’&VfW&W"Òv‡GG3¢òöÖævf—&RçFòòs°¢–b‡W&Âæ–æ6ÇVFW2‚v6öÖ–6²r’’&VfW&W"Òv‡GG3¢òö6öÖ–6²æ–òòs°¢–b‡W&Âæ–æ6ÇVFW2‚vÖævFW‚r’’&VfW&W"Òv‡GG3¢òöÖævFW‚æ÷&ròs° ¢6öç7B&W7öç6RÒv—B†–÷2ævWB‡W&ÂÂ°¢&W7öç6UG—S¢w7G&VÒrÀ¢†VFW'3¢°¢uW6W"ÔvVçBs¢tÖ÷¦–ÆÆóRã…v–æF÷w2åBã²v–ãcC²ƒcB’ÆUvV$¶—BóS3rã3b„´…DÔÂÂÆ–¶RvV6¶ò’6‡&öÖRó#ããã6f&’óS3rã3brÀ¢u&VfW&W"s¢&VfW&W"À¢t66WBs¢v–ÖvRöf–bÆ–ÖvR÷vV'Æ–ÖvRöærÆ–ÖvRò¢Â¢ò£·Óã‚p¢ÒÀ¢F–ÖV÷WC¢S ¢Ò“°¢6öç7B6öçFVçEG—RÒ&W7öç6Ræ†VFW'5²v6öçFVçB×G—RuÒÇÂv–ÖvRö§Vrs°¢&W2ç6WD†VFW"‚t6öçFVçBÕG—RrÂ6öçFVçEG—R“°¢&W2ç6WD†VFW"‚t66W72Ô6öçG&öÂÔÆÆ÷rÔ÷&–v–ârÂr¢r“°¢&W2ç6WD†VFW"‚t66†RÔ6öçG&öÂrÂwV&Æ–2ÂÖ‚ÖvSÓƒcCr“°¢&W7öç6RæFFç—R‡&W2“°¢Ö6F6‚†R—°¢6öç6öÆRæW'&÷"‚w&÷‡’W'&÷"rÂRæÖW76vRÂW&Â“°¢òòfÆÆ&6³¢&VF—&V7BFò÷&–v–æÀ¢&W2ç7FGW2ƒS’æ§6öâ‡²W'&÷#¢RæÖW76vRÒ“°¢Ð§Ò“° ¢òò&ö÷@¦ævWB‚ròrÂ‡&WÇ&W2“Óç°¢&W2ç6VæB† ¢Æƒåfö–Dæ–ÖR&6¶VæB—2'Vææ–æsÂöƒà¢Çå&÷f–FW'3¢G´ö&¦V7Bæ¶W—2‡&÷f–FW'2’æ¦ö–â‚rÂr—ÓÂ÷à¢ÇVÃà¢ÆÆ“ãÆ‡&VcÒ"ö’ö†VÇF‚#âö’ö†VÇFƒÂöãÂöÆ“à¢ÆÆ“ãÆ‡&VcÒ"ö’÷&÷f–FW'2#âö’÷&÷f–FW'3ÂöãÂöÆ“à¢ÆÆ“ãÆ‡&VcÒ"ö’÷G&VæF–ær#âö’÷G&VæF–æsÂöãÂöÆ“à¢ÆÆ“âö’÷67&R÷6V&6ƒ÷VW'“Öæ'WFòg&÷f–FW#ÖÖævFWƒÂöÆ“à¢ÆÆ“âö’÷67&Rö–æfóö–CÒg&÷f–FW#ÖÖævFWƒÂöÆ“à¢ÆÆ“âö’÷67&R÷vW3ö–CÒf6†FW$çVÖ&W#Òg&÷f–FW#ÖÖævFWƒÂöÆ“à¢ÆÆ“âö’÷&÷‡’ö–ÖvS÷W&ÃÒââãÂöÆ“à¢Â÷VÃà¢“°§Ò“° ¦ÖöGVÆRæW‡÷'G2Ò° ¢òòÆö6Â'VâöæÇ’…fW&6VÂW6W2ÖöGVÆRæW‡÷'G2&÷fR¦–b‚&ö6W72æVçbådU$4TÂ’æÆ—7FVâ…õ%BÂ‚“Óç°¢6öç6öÆRæÆör†fö–Dæ–ÖR&6¶VæBÆ—7FVæ–æröâ‡GG¢òöÆö6Æ†÷7C¢Gµõ%GÖ“°¢6öç6öÆRæÆör†&÷f–FW'3¢G´ö&¦V7Bæ¶W—2‡&÷f–FW'2’æ¦ö–â‚rÂr—Ö“°§Ò“°
