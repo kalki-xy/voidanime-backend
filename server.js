@@ -203,7 +203,7 @@ app.get('/api/scrape/pages', async (req,res)=>{
       pages = await provider.getPages(chapterId || id);
     }
     // Normalize to array of strings and array of objects
-    const flat = pages.map(p=> typeof p==='string'??p : (p.url || p.imageUrl || p.src));
+    const flat = pages.map(p=> typeof p==='string'? p : (p.url || p.imageUrl || p.src));
     const payload = { pages: flat, data: flat, images: flat, results: pages };
     cache.set(cacheKey, payload, 600);
     res.json(payload);
