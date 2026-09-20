@@ -9,6 +9,7 @@ const mangadexProvider = require('./providers/mangadex');
 const mangapillProvider = require('./providers/mangapill');
 const manganatoProvider = require('./providers/manganato');
 const toonilyProvider = require('./providers/toonily');
+const mangataroProvider = require('./providers/mangataro');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,7 +39,7 @@ app.use((req,res,next)=>{
 
 const providers = {};
 [
-  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider], ['toonily', toonilyProvider]
+  ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider], ['toonily', toonilyProvider], ['mangataro', mangataroProvider]
 ].forEach(([k, v]) => { if (v) providers[k] = v; });
 
 // Helper to get provider (stubs fall back to the first real provider)
@@ -61,6 +62,7 @@ app.get('/api/providers', (req,res)=>{
     { id:'mangapill', name:'MangaPill', type:'Scraper', desc:'Cheerio scraper' },
     { id:'manganato', name:'Manganato', type:'Scraper', desc:'Huge library, fast' },
     { id:'toonily', name:'Toonily', type:'Scraper', desc:'Full manhwa library (Madara)' },
+    { id:'mangataro', name:'MangaTaro', type:'JSON API', desc:'Full manhwa library' },
     { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Blocked: Cloudflare 403' },
     { id:'mangafire', name:'MangaFire', type:'Scraper', desc:'Blocked: Cloudflare' },
     { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' }
@@ -258,6 +260,7 @@ app.get('/api/proxy/image', async (req,res)=>{
     if(url.includes('comick')) referer = 'https://comick.io/';
     if(url.includes('mangadex')) referer = 'https://mangadex.org/';
     if(url.includes('toonily')) referer = 'https://toonily.com/';
+    if(url.includes('mangataro')) referer = 'https://mangataro.org/';
 
     const response = await axios.get(url, {
       responseType: 'stream',
