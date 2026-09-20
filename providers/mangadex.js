@@ -31,16 +31,25 @@ async function search(q, opts){
 }
 
 async function chapterList(id){
-  const r = await axios.get(`${API}/manga/${id}/feed`, {
-    params: { limit: 500, 'translatedLanguage[]': 'en', 'order[chapter]': 'asc' },
-    headers: UA, timeout: 20000
-  });
-  return r.data.data.map(c => ({
-    id: c.id,
-    number: c.attributes.chapter || null,
-    title: c.attributes.title || '',
-    date: c.attributes.publishAt || null
-  }));
+  // FULL list: paginate the feed until exhausted (500 per page, hard cap 5000)
+  const out = [];
+  let offset = 0;
+  while (true){
+    const r = await axios.get(`${API}/manga/${id}/feed`, {
+      params: { limit: 500, offset, 'translatedLanguage[]': 'en', 'order[chapter]': 'asc' },
+      headers: UA, timeout: 25000
+    });
+    const batch = r.data.data || [];
+    batch.forEach(c => out.push({
+      id: c.id,
+      number: c.attributes.chapter || null,
+      title: c.attributes.title || '',
+      date: c.attributes.publishAt || null
+    }));
+    if (batch.length < 500 || out.length >= 5000) break;
+    offset += 500;
+  }
+  return out;
 }
 
 async function getInfo(id){
