@@ -1,140 +1,132 @@
-// Toonily provider — Madara (WordPress) theme scraper, ported from MangaForge's toonily.py
+// Toonily provider - Madara WordPress scraper via cheerio (same style as mangapill.js)
 // Coverage: full Korean manhwa library (the gap MangaDex licensing leaves)
 const axios = require('axios');
+const cheerio = require('cheerio');
 const BASE = 'https://toonily.com';
-const H = {
+const UA = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
   'Referer': 'https://toonily.com/'
 };
 
-function unesc(s){
-  var map={'amp':'&','lt':'<','gt':'>','quot':'"','#039':"'",'#8217':"'",'#8220':'"','#8221':'"','nbsp':' ','hellip':'...','rsquo':"'",'lsquo':"'",'ldquo':'"','rdquo':'"','mdash':'\u2014'};
-  return String(s||'').replace(/&#?([a-z0-9]+);/gi,function(_,k){return map[String(k).toLowerCase()]!=null?map[String(k).toLowerCase()]:_;})
-    .replace(/\u2018|\u2019/g,"'").replace(/\u201c|\u201d/g,'"').replace(/\u2026/g,'...');
+async function get(url){
+  const r = await axios.get(url, { headers: UA, timeout: 20000 });
+  return cheerio.load(r.data);
 }
 
-function stripTags(s){ return unesc(String(s||'').replace(/<[^>]*>/g,'')).trim(); }
-function abs(u){
-  if(!u) return '';
-  u = String(u).trim().split(' ')[0];
-  if(u.startsWith('//')) return 'https:'+u;
-  if(u.startsWith('/')) return BASE+u;
-  return u;
-}
-function imgSrc(tag){
-  if(!tag) return '';
-  const m = tag.match(/(?:data-src|data-lazy-src|data-original|src)="([^"]+)"/);
-  const u = m ? m[1] : '';
-  if(!u || u.startsWith('data:')) return '';
-  return abs(u);
-}
-async function get(url, extra){
-  const r = await axios.get(url, { headers: Object.assign({}, H, extra || {}), timeout: 20000 });
-  return r.data;
+function absImg(src){
+  if(!src) return null;
+  src = String(src).split(' ')[0];
+  if(src.startsWith('//')) return 'https:' + src;
+  if(src.startsWith('/')) return BASE + src;
+  return src;
 }
 
 async function search(q){
-  if(!q) return [];
-  const html = await get(BASE + '/?s=' + encodeURIComponent(q) + '&post_type=wp-manga');
+  const $ = await get(BASE + '/?s=' + encodeURIComponent(String(q || '')) + '&post_type=wp-manga');
   const out = [];
   const seen = {};
-  // Madara search rows: each result block has Title and a cover 
-  const blocks = html.split(/(?=<div[^>]+class="[^"]*(?:page-item-detail|c-tabs-item__content)[^"]*")/);
-  for (const b of blocks){
-    const m = b.match(/<h3[^>]*class="[^"]*h5[^"]*"[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
-    if(!m) continue;
-    const href = abs(m[1]);
-    if(href.indexOf(BASE + '/webtoon/') !== 0) continue;
-    const slug = href.replace(/\/+$/,'').split('/').pop();
-    if(seen[slug]) continue;
+  $('div.page-item-detail, div.c-tabs-item__content').each((i, el) => {
+    const $el = $(el);
+    const a = $el.find('h3 a').first();
+    const href = a.attr('href') || '';
+    if(!href || href.indexOf('/webtoon/') < 0) return;
+    const slug = href.replace(/\/+$/, '').split('/').pop();
+    if(!slug || seen[slug]) return;
     seen[slug] = 1;
-    const img = imgSrc((b.match(/<img[^>]+(?:data-src|data-lazy-src|src)="[^"]+"/)||[''])[0]);
-    out.push({ id: slug, title: stripTags(m[2]), alt: [], coverUrl: img });
-  }
-  return out;
+    const img = $el.find('img').first();
+    let title = (a.attr('title') || a.text() || '').replace(/\s+/g, ' ').trim();
+    if(!title && img.length) title = (img.attr('alt') || '').replace(/\s+/g, ' ').trim();
+    out.push({ id: slug, title: title || slug, alt: [], coverUrl: absImg(img.attr('data-src') || img.attr('src')) });
+  });
+  return out.slice(0, 24);
 }
 
-function parseChapters(html){
-  const out = [];
+function parseChapters($){
+  const chapters = [];
   const seen = {};
-  const re = /<li[^>]*class="[^"]*wp-manga-chapter[^"]*"[^>]*>([\s\S]*?)<\/li>/g;
-  let m;
-  while ((m = re.exec(html))){
-    const a = m[1].match(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
-    if(!a) continue;
-    const href = abs(a[1]);
-    if(href.indexOf('/webtoon/') < 0 && href.indexOf('/manga/') < 0) continue;
-    const label = stripTags(a[2]);
-    const nm = label.match(/(?:chapter|episode|ch\.?|season\s*\d+\s*:?\s*chapter)\s*([0-9]+(?:\.[0-9]+)?)/i) || href.match(/chapter-?([0-9]+(?:\.[0-9]+)?)/i);
-    const num = nm ? nm[1] : null;
-    if(href && seen[href]) continue;
+  $('li.wp-manga-chapter a').each((i, el) => {
+    const $el = $(el);
+    const href = $el.attr('href') || '';
+    if(!href || (href.indexOf('/webtoon/') < 0 && href.indexOf('/manga/') < 0)) return;
+    if(seen[href]) return;
     seen[href] = 1;
+    const text = $el.text().replace(/\s+/g, ' ').trim();
+    let n = text.match(/(?:chapter|episode)\s*([\d.]+)/i);
+    if(!n) n = href.match(/chapter-?([\d.]+)/i);
     const rel = href.indexOf(BASE) === 0 ? href.slice(BASE.length) : href;
-    out.push({ id: rel.replace(/^\//+/,''), number: num, title: label, date: null });
-  }
-  return out;
+    chapters.push({ id: rel.replace(/^\/+/, ''), number: n ? n[1] : null, title: text.slice(0, 80), date: null });
+  });
+  return chapters;
 }
 
 async function chapterList(slug){
-  const url = BASE + '/webtoon/' + slug.replace(/^\/+|\/+$/g,'') + '/';
-  let html = await get(url);
-  let list = parseChapters(html);
-  if (list.length < 20){
-    // newer Madara builds lazy-load the TOC — full list via the ajax endpoint
-    try {
-      const r = await axios.post(url + 'ajax/chapters/', '', { headers: Object.assign({'X-Requested-With':'XMLHttpRequest'}, H), timeout: 20000 });
-      const more = parseChapters(typeof r.data === 'string' ? r.data : '');
-      if (more.length > list.length) list = more;
-    } catch (e) { /* keep static list */ }
+  const url = BASE + '/webtoon/' + String(slug).replace(/^\/+|\/+$/g, '') + '/';
+  let $ = await get(url);
+  let chapters = parseChapters($);
+  if(chapters.length < 20){
+    // newer Madara builds lazy-load the TOC, full list via the ajax endpoint
+    try{
+      const r = await axios.post(url + 'ajax/chapters/', '', { headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, UA), timeout: 20000 });
+      const more = parseChapters(cheerio.load(String(r.data || '')));
+      if(more.length > chapters.length) chapters = more;
+    }catch(e){ /* keep static list */ }
   }
-  // Madara lists newest first; keep site order (matches MangaPill convention)
-  return list;
+  return chapters;
 }
 
 async function getInfo(id){
-  const slug = String(id).replace(/^\/+|\/+$/g,'');
-  const url = BASE + '/webtoon/' + slug + '/';
-  const html = await get(url);
-  const title = stripTags(((html.match(/<div[^>]*class="[^"]*post-title[^"]*"[^>]*>\s*<h1[^>]*>([\s\S]*?)<\/h1>/)||[])[1]||''));
-  const covBlock = (html.match(/<div[^>]*class="[^"]*summary_image[^"]*"[^>]*>[\s\S]{0,800}?<img[^>]*>/)||[''])[0];
-  const cover = imgSrc(covBlock);
-  const desc = stripTags(((html.match(/<div[^>]*class="[^"]*summary__content[^"]*"[^>]*>([\s\S]*?)<\/div>/)||[])[1]||'').slice(0,400));
+  const slug = String(id).replace(/^\/+|\/+$/g, '');
+  const $ = await get(BASE + '/webtoon/' + slug + '/');
+  const title = ($('div.post-title h1').first().text() || slug).replace(/\s+/g, ' ').trim();
+  const img = $('div.summary_image img').first();
+  const cover = absImg(img.attr('data-src') || img.attr('src'));
+  const description = ($('div.summary__content').first().text() || '').replace(/\s+/g, ' ').trim().slice(0, 400);
+  const alt = [];
+  $('div.post-content_item').each((i, el) => {
+    const label = $(el).find('div.summary-heading').first().text().replace(/\s+/g, ' ').trim().toLowerCase();
+    if(label === 'alternative' || label === 'alternative titles' || label === 'alt name(s)'){
+      $(el).find('div.summary-content a').each((j, a) => {
+        const t = $(a).text().replace(/\s+/g, ' ').trim();
+        if(t && alt.indexOf(t) < 0) alt.push(t);
+      });
+    }
+  });
   const chapters = await chapterList(slug);
-  return { id: slug, title: title || slug, description: desc, coverUrl: cover, status: null, chapters };
+  return { id: slug, title: title, description: description, coverUrl: cover, status: null, alt: alt, chapters: chapters };
+}
+
+async function getChapters(id){
+  return chapterList(id);
 }
 
 async function getPages(chapterId){
   let p = String(chapterId);
-  if(!/^https?:/i.test(p)) p = BASE + '/' + p.replace(/^\//+/,'');
-  const html = await get(p);
+  if(!/^https?:/i.test(p)) p = BASE + '/' + p.replace(/^\/+/, '');
+  const $ = await get(p);
   const urls = [];
-  const re = /<img[^>]*>/g;
-  let m;
-  while ((m = re.exec(html))){
-    const tag = m[0];
-
-    const src = imgSrc(tag);
-    if(!src) continue;
-    if(/logo|banner|avatar|favicon/i.test(src)) continue;
-    if(urls.indexOf(src) < 0) urls.push(src);
+  const add = (u) => { const s = absImg(u); if(s && urls.indexOf(s) < 0) urls.push(s); };
+  $('div.read-container img, div.reading-content img, img.wp-manga-chapter-img').each((i, el) => {
+    add($(el).attr('data-src') || $(el).attr('data-lazy-src') || $(el).attr('src'));
+  });
+  if(!urls.length){
+    $('img').each((i, el) => {
+      const s = absImg($(el).attr('data-src') || $(el).attr('src'));
+      if(s && (s.indexOf('wp-content/uploads') >= 0 || s.indexOf('/uploads/') >= 0) && urls.indexOf(s) < 0) urls.push(s);
+    });
   }
-  // if the page used generic  tags without classes, filter to wp-content/uploads
-  const filtered = urls.filter(u => u.indexOf('wp-content/uploads') >= 0 || u.indexOf('cdn') >= 0);
-  const out = filtered.length >= 3 ? filtered : urls;
-  if(!out.length) throw new Error('no images found for ' + p);
-  return out;
+  if(!urls.length) throw new Error('no images found for ' + p);
+  return urls;
 }
 
 async function getPagesByNumber(id, chapterNumber, chapterId){
-  if (chapterId) return getPages(chapterId);
-  if (chapterNumber == null) throw new Error('chapterId or chapterNumber required');
+  if(chapterId) return getPages(chapterId);
+  if(chapterNumber == null) throw new Error('chapterId or chapterNumber required');
   const chapters = await chapterList(id);
   const target = String(chapterNumber);
   const matches = chapters.filter(c => String(c.number) === target);
-  if (!matches.length) throw new Error('chapter not found: ' + target);
+  if(!matches.length) throw new Error('chapter not found: ' + target);
   return getPages(matches[0].id);
 }
 
-module.exports = { search, getInfo, getChapters: chapterList, getPages, getPagesByNumber };
+module.exports = { search, getInfo, getChapters, getPages, getPagesByNumber };
