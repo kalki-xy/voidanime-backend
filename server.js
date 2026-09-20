@@ -294,10 +294,10 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
-// ---------- HINDI DEBUG (temporary: see raw HTML from the domain Vercel reaches) ----------
+// ---------- HINDI DEBUG (temporary: compact domain probe) ----------
 app.get('/api/hindi/debug', async (req,res)=>{
   const axios2 = require('axios');
-  const domains = ['animesalttv.to','animesalt.ro','animesalt.me','animesalt.in','animesalt.ac','animesalt.to','animesalt.link'];
+  const domains = ['animesalttv.to','animesalt.ro','animesalt.me','animesalt.in','animesalt.ac','animesalt.to','animesalt.link','toonstream.dad','toonstream.vip','multishows.top','gokuhd.com','desidubanime.me'];
   const out = [];
   for (const d of domains) {
     try {
@@ -306,9 +306,10 @@ app.get('/api/hindi/debug', async (req,res)=>{
         timeout: 12000, maxRedirects: 5, validateStatus: null
       });
       const body = typeof r.data === 'string' ? r.data : '';
-      out.push({ domain: d, status: r.status, len: body.length, hasAA: body.indexOf('aa-movies') >= 0, hasLnkBlk: body.indexOf('lnk-blk') >= 0, hasEpisodeByTemp: body.indexOf('episode_by_temp') >= 0, sample: body.slice(0, 400) });
+      const tm = body.match(/<title>([^<]{0,80})</i);
+      out.push({ d: d, st: r.status, len: body.length, cf: body.indexOf('Just a moment') >= 0 || body.indexOf('cf-challenge') >= 0 || body.indexOf('challenge-platform') >= 0, aa: body.indexOf('aa-movies') >= 0, lnk: body.indexOf('lnk-blk') >= 0, ebt: body.indexOf('episode_by_temp') >= 0, t: tm ? tm[1].trim() : '' });
     } catch (e) {
-      out.push({ domain: d, error: String(e.message || e) });
+      out.push({ d: d, err: String(e.message || e).slice(0, 90) });
     }
   }
   res.json({ ok: true, domains: out });
