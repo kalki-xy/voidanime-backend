@@ -1,7 +1,8 @@
 // animesalt.js — Hindi / Tamil / Telugu dubbed anime + movies provider
 // Scrapes the AnimeSalt network (animesalttv.to primary). The site family
 // serves Indian-language dubs. Episode pages expose a custom WP-REST player
-// (wp-json/animesalt/v1/zplay?id=...) that is itself an embeddable iframe.
+// (wp-json/animesalt/v1/zplay?id=...) that embeds a megaplay player whose
+// page carries a direct `var SRC = ...m3u8` we extract for native playback.
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -114,23 +115,47 @@ async function episodes(id, season){
   return { seasons: Object.keys(seasons).map(Number).sort(function(a, b){ return a - b; }), episodes: eps };
 }
 
-// ---- streams: GET /episode/slug-SxE/ — the page embeds a zplay player iframe ----
+// ---- streams: episode page -> zplay player -> megaplay embed -> direct HLS m3u8 ----
 async function streams(id, season, ep){
   const slug = String(id).replace(/^\/+/, '').replace(/\/+$/, '');
   const sn = parseInt(season, 10) || 1;
   const en = parseInt(ep, 10) || 1;
   const $ = await get('/episode/' + encodeURIComponent(slug) + '-' + sn + 'x' + en + '/');
-  const out = [];
-  const seen = {};
+  let zurl = '';
   $('iframe').each(function(i, el){
+    if (zurl) return;
     let src = $(el).attr('src') || $(el).attr('data-src') || '';
     if (!src) return;
     src = unesc(src);
     if (src.indexOf('http') !== 0 && src.indexOf('/') === 0 && GOOD) src = 'https://' + GOOD + src;
-    if (!src || seen[src] || src.indexOf('recaptcha') >= 0 || src.indexOf('google') >= 0) return;
-    seen[src] = 1;
-    out.push({ server: 'AnimeSalt ' + (out.length + 1), link: src });
+    if (src && src.indexOf('recaptcha') < 0) zurl = src;
   });
+  const out = [];
+  async function fetchPage(url){
+    try {
+      const r = await axios.get(url, { headers: Object.assign({}, UA, { Referer: 'https://' + (GOOD || 'animesalttv.to') + '/' }), timeout: 15000, maxRedirects: 5, validateStatus: null });
+      return typeof r.data === 'string' ? r.data : '';
+    } catch (e) { return ''; }
+  }
+  if (zurl) {
+    const b = await fetchPage(zurl);
+    const srcM = b.match(/SRC\s*=\s*"([^"]+\.m3u8[^"]*)"/);
+    const emM = b.match(/https?:\/\/[a-zA-Z0-9.-]*megaplay[a-zA-Z0-9.-]*\/e\/[a-zA-Z0-9]+/);
+    if (srcM) {
+      const pM = b.match(/POSTER\s*=\s*"([^"]+)"/);
+      out.push({ server: 'Hindi HLS', link: srcM[1], type: 'hls', poster: pM ? pM[1] : null });
+    }
+    if (emM) {
+      const b2 = await fetchPage(emM[0]);
+      const s2 = b2.match(/SRC\s*=\s*"([^"]+\.m3u8[^"]*)"/);
+      if (s2) {
+        const p2 = b2.match(/POSTER\s*=\s*"([^"]+)"/);
+        out.push({ server: 'Hindi HLS 2', link: s2[1], type: 'hls', poster: p2 ? p2[1] : null });
+      }
+      out.push({ server: 'Player', link: emM[0], type: 'embed' });
+    }
+    if (!out.length) out.push({ server: 'AnimeSalt 1', link: zurl, type: 'embed' });
+  }
   return out;
 }
 
