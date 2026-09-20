@@ -249,7 +249,7 @@ app.get('/api/proxy/image', async (req,res)=>{
   try{
     // Determine referer based on domain
     let referer = 'https://mangadex.org/';
-    if(url.includes('mangapill')) referer = 'https://mangapill.com/';
+    if(url.includes('mangapill') || url.includes('readdetectiveconan')) referer = 'https://mangapill.com/';
     if(url.includes('natomanga') || url.includes('manganato') || url.includes('mkklcdn')) referer = 'https://natomanga.com/';
     if(url.includes('weebcentral')) referer = 'https://weebcentral.com/';
     if(url.includes('mangafire')) referer = 'https://mangafire.to/';
