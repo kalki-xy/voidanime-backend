@@ -294,6 +294,29 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
+// ---------- HINDI DEBUG v9 (megaplay embed JS discovery) ----------
+app.get('/api/hindi/debug', async (req,res)=>{
+  const axios2 = require('axios');
+  const HDRS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Referer': 'https://animesalttv.to/', 'Accept-Language': 'en-US,en;q=0.9' };
+  const out = [];
+  try {
+    const r = await axios2.get('https://vid.megaplay.su/e/1ad7af7fdeb9e1d0e66c9ef048829971863350290eb47840?lang=hindi', { headers: HDRS, timeout: 12000, validateStatus: null });
+    const body = typeof r.data === 'string' ? r.data : '';
+    const m3u8 = (body.match(/[a-zA-Z0-9:./_?=&-]*m3u8[a-zA-Z0-9:./_?=&-]*/g) || []).slice(0, 5);
+    const apis = (body.match(/["'\\/]?(?:https?:\\/\\/[^"'\\s]+)?\\/api\\/[a-zA-Z0-9/_-]+/g) || []).slice(0, 8);
+    const sources = [];
+    let idx = 0;
+    while (sources.length < 3) {
+      const k = body.toLowerCase().indexOf('source', idx);
+      if (k < 0) break;
+      idx = k + 6;
+      sources.push(body.slice(Math.max(0, k - 150), k + 250).replace(/\\s+/g, ' '));
+    }
+    out.push({ st: r.status, len: body.length, m3u8: m3u8, apis: apis, sources: sources });
+  } catch (e) { out.push({ err: String(e.message || e).slice(0, 100) }); }
+  res.json({ ok: true, out: out });
+});
+
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
 app.get('/api/proxy/image', async (req,res)=>{
   const url = req.query.url;
@@ -315,7 +338,7 @@ app.get('/api/proxy/image', async (req,res)=>{
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': referer,
-        'Accept': 'image/avif,image/webp,image/apng/image/*,*/*;q=0.8'
+        'Accept': 'image/avq/image/webp,image/apng,image/*,*/*;q=0.8'
       },
       timeout: 15000
     });
