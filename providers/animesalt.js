@@ -169,15 +169,23 @@ function trimSlash(s){
 function pickSrc(body){
   if (!body) return null;
   var BS = String.fromCharCode(92);
-  var at = body.indexOf('SRC=');
+  var TAB = String.fromCharCode(9);
+  var at = body.indexOf('SRC');
   while (at >= 0) {
-    var q1 = body.indexOf('"', at + 4);
-    var q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
-    if (q1 >= 0 && q2 > q1) {
-      var u = body.substring(q1 + 1, q2).split(BS).join('');
-      if (u.indexOf('.m3u8') >= 0 || u.indexOf('zhls') >= 0) return u;
+    var j = at + 3;
+    while (j < body.length && (body.charAt(j) === ' ' || body.charAt(j) === TAB)) j++;
+    if (j < body.length && body.charAt(j) === '=') {
+      j++;
+      while (j < body.length && (body.charAt(j) === ' ' || body.charAt(j) === TAB)) j++;
+      if (j < body.length && body.charAt(j) === '"') {
+        var q2 = body.indexOf('"', j + 1);
+        if (q2 > j) {
+          var u = body.substring(j + 1, q2).split(BS).join('');
+          if (u.indexOf('.m3u8') >= 0 || u.indexOf('zhls') >= 0) return u;
+        }
+      }
     }
-    at = body.indexOf('SRC=', at + 4);
+    at = body.indexOf('SRC', at + 3);
   }
   return null;
 }
