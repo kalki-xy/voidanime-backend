@@ -375,6 +375,29 @@ app.get('/api/hindi/media', async (req,res)=>{
   } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
 });
 
+// ---------- TMDB PROXY (public key, cached — bypasses ISP blocks on api.themoviedb.org) ----------
+const TMDB_KEYS = [process.env.TMDB_KEY, 'db55323b8d3e4154498498a75642b381'].filter(function(k){ return k; });
+app.get('/api/tmdb/*', async (req,res)=>{
+  const rest = req.params[0] || '';
+  const qp = Object.assign({}, req.query);
+  delete qp.api_key;
+  const qs = Object.keys(qp).map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(qp[k]); }).join('&');
+  const cacheKey = 'tmdbp:' + rest + '?' + qs;
+  const cached = cache.get(cacheKey);
+  if (cached) return res.json(cached);
+  let lastErr = 'no keys configured';
+  for (const k of TMDB_KEYS) {
+    try {
+      const url = 'https://api.themoviedb.org/3/' + rest + (qs ? '?' + qs + '&' : '?') + 'api_key=' + encodeURIComponent(k);
+      const r = await axios.get(url, { timeout: 12000, validateStatus: null });
+      if (r.status === 200) { cache.set(cacheKey, r.data, 1800); return res.json(r.data); }
+      lastErr = 'HTTP ' + r.status + ' via key ' + k.slice(0, 6);
+      if (r.status !== 401 && r.status !== 403 && r.status !== 429) return res.status(r.status).json(r.data);
+    } catch (e) { lastErr = String(e.message || e); }
+  }
+  res.status(502).json({ error: 'tmdb proxy failed: ' + lastErr });
+});
+
 // ---------- IMAGE PROXY (critical for VoidAnime style) ----------
 app.get('/api/proxy/image', async (req,res)=>{
   const url = req.query.url;
