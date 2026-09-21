@@ -347,44 +347,72 @@ app.get('/api/hindi/media', async (req,res)=>{
   const rk = MEDIA_REFERS[req.query.r] ? req.query.r : 'animesalt';
   if(!u || String(u).indexOf('http') !== 0) return res.status(400).send('u required');
   try {
-    const isM3u8 = String(u).indexOf('.m3u8') >= 0;
     const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Referer': MEDIA_REFERS[rk], 'Accept': '*/*' };
     if (req.headers.range) headers['Range'] = req.headers.range;
-    const r = await axios.get(u, { headers: headers, timeout: 25000, responseType: isM3u8 ? 'text' : 'stream', maxRedirects: 5, validateStatus: null });
+    const r = await axios.get(u, { headers: headers, timeout: 25000, responseType: 'stream', maxRedirects: 5, validateStatus: null });
     res.setHeader('Access-Control-Allow-Origin', '*');
-    if (isM3u8) {
-      const base = String(u);
-      const lines = String(r.data).split('\n');
-      const outL = [];
-      for (let ln of lines) {
-        if (ln.indexOf('\r') >= 0) ln = ln.split('\r')[0];
-        if (!ln) { outL.push(''); continue; }
-        if (ln.charAt(0) === '#') {
-          const qi = ln.indexOf('URI="');
-          if (qi >= 0) {
-            const end = ln.indexOf('"', qi + 5);
-            const inner = ln.slice(qi + 5, end);
-            let abs = inner;
-            try { abs = new URL(inner, base).href; } catch (e2) {}
-            ln = ln.slice(0, qi) + 'URI="' + mediaProx(abs, rk) + '"' + ln.slice(end + 1);
+    const isPlaylistUrl = String(u).indexOf('.m3u8') >= 0 || String(u).indexOf('zhls') >= 0 || String(u).indexOf('zproxy') >= 0;
+    if (isPlaylistUrl) {
+      // sniff the first chunk: playlists start with #EXTM3U, everything else is media bytes
+      const first = await new Promise(function(resolve){
+        var settled = false;
+        function fin(v){ if(!settled){ settled = true; resolve(v); } }
+        r.data.once('data', function(c){ fin(c); });
+        r.data.once('end', function(){ fin(null); });
+        r.data.once('error', function(){ fin(null); });
+        setTimeout(function(){ fin(null); }, 8000);
+      });
+      const isTxt = first && first.length >= 7 && first.slice(0, 7).toString('utf8') === '#EXTM3U';
+      if (isTxt) {
+        const full = await new Promise(function(resolve){
+          var acc = [first];
+          r.data.on('data', function(c){ acc.push(c); });
+          r.data.on('end', function(){ resolve(Buffer.concat(acc).toString('utf8')); });
+          r.data.on('error', function(){ resolve(Buffer.concat(acc).toString('utf8')); });
+          setTimeout(function(){ resolve(Buffer.concat(acc).toString('utf8')); }, 15000);
+        });
+        const base = String(u);
+        const lines = full.split('\n');
+        const outL = [];
+        for (let ln of lines) {
+          if (ln.indexOf('\r') >= 0) ln = ln.split('\r')[0];
+          if (!ln) { outL.push(''); continue; }
+          if (ln.charAt(0) === '#') {
+            const qi = ln.indexOf('URI="');
+            if (qi >= 0) {
+              const end = ln.indexOf('"', qi + 5);
+              const inner = ln.slice(qi + 5, end);
+              let abs = inner;
+              try { abs = new URL(inner, base).href; } catch (e2) {}
+              ln = ln.slice(0, qi) + 'URI="' + mediaProx(abs, rk) + '"' + ln.slice(end + 1);
+            }
+            outL.push(ln);
+          } else {
+            let abs2 = ln;
+            try { abs2 = new URL(ln, base).href; } catch (e3) {}
+            outL.push(mediaProx(abs2, rk));
           }
-          outL.push(ln);
-        } else {
-          let abs2 = ln;
-          try { abs2 = new URL(ln, base).href; } catch (e3) {}
-          outL.push(mediaProx(abs2, rk));
         }
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.status(r.status === 200 ? 200 : r.status).send(outL.join('\n'));
+        return;
       }
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      res.status(r.status === 200 ? 200 : r.status).send(outL.join('\n'));
-    } else {
+      // binary after all: pipe what we already read plus the rest
       res.setHeader('Content-Type', r.headers['content-type'] || 'video/mp4');
       if (r.headers['content-length']) res.setHeader('Content-Length', r.headers['content-length']);
       if (r.headers['accept-ranges']) res.setHeader('Accept-Ranges', r.headers['accept-ranges']);
       if (r.headers['content-range']) res.setHeader('Content-Range', r.headers['content-range']);
       res.status(r.status);
+      if (first) res.write(first);
       r.data.pipe(res);
+      return;
     }
+    res.setHeader('Content-Type', r.headers['content-type'] || 'video/mp4');
+    if (r.headers['content-length']) res.setHeader('Content-Length', r.headers['content-length']);
+    if (r.headers['accept-ranges']) res.setHeader('Accept-Ranges', r.headers['accept-ranges']);
+    if (r.headers['content-range']) res.setHeader('Content-Range', r.headers['content-range']);
+    res.status(r.status);
+    r.data.pipe(res);
   } catch(e){ res.status(502).json({ ok:false, error: String(e.message || e) }); }
 });
 
