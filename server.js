@@ -307,6 +307,24 @@ app.get('/api/hindi/dbg', async (req,res)=>{
   }catch(e){ res.json({ ok:false, error: String(e.message || e) }); }
 });
 
+// ---------- HAVE-CHECK: does the 2Embed pipeline carry this TMDB id? (2Embed is server-rendered, so the poster/title in the HTML is a reliable have/have-not signal; client-only players like VidLink/VidFast cannot be probed this way) ----------
+const haveCache = new Map();
+app.get('/api/hindi/have', async (req,res)=>{
+  const id = String(req.query.id||'').replace(/[^a-z0-9]/gi,'');
+  if(!id) return res.status(400).json({ ok:false, error:'id required' });
+  const ck='v1:'+id, hit=haveCache.get(ck);
+  if(hit && Date.now()-hit.t<600000) return res.json({ ok:true, have:hit.have, cached:true });
+  try{
+    const r = await axios.get('https://www.2embed.skin/embed/'+id, { headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36','Accept':'text/html,*/*'}, timeout:12000, maxRedirects:5, validateStatus:null });
+    const body = typeof r.data==='string'? r.data : '';
+    // have = real TMDB poster present AND not the generic fallback title
+    const have = r.status===200 && body.indexOf('image.tmdb.org/t/p/')>=0 && body.indexOf('2Embed.cc - Player')<0;
+    haveCache.set(ck,{t:Date.now(),have:have});
+    if(haveCache.size>600){ const k0=haveCache.keys().next().value; haveCache.delete(k0); }
+    res.json({ ok:true, have:have, status:r.status });
+  }catch(e){ res.json({ ok:false, have:null, error:String(e.message||e) }); }
+});
+
 // ---------- HINDI WATCH (justanime core — real English sub/dub sources) ----------
 app.get('/api/hindi/watch', async (req,res)=>{
   const anilistId = req.query.anilistId || req.query.id;
