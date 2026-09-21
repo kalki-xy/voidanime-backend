@@ -115,7 +115,7 @@ async function episodes(id, season){
   return { seasons: Object.keys(seasons).map(Number).sort(function(a, b){ return a - b; }), episodes: eps };
 }
 
-// ---- streams: episode page -> zplay player -> megaplay embed -> direct HLS m3u8 ----
+// ---- streams: episode page -> zplay player -> direct HLS (zhls multi-audio aware) ----
 async function streams(id, season, ep){
   const slug = String(id).replace(/^\/+/, '').replace(/\/+$/, '');
   const sn = parseInt(season, 10) || 1;
@@ -139,20 +139,21 @@ async function streams(id, season, ep){
   }
   if (zurl) {
     const b = await fetchPage(zurl);
-    const srcM = b.match(/SRC\s*=\s*"([^"]+\.m3u8[^"]*)"/);
+    // zhls-aware: pickSrc tolerates spaced assignments and JSON-escaped slashes, accepts zhls playlists
+    const direct = pickSrc(b);
     const emM = b.match(/https?:\/\/[a-zA-Z0-9.-]*megaplay[a-zA-Z0-9.-]*\/e\/[a-zA-Z0-9]+/);
-    if (srcM) {
-      const pM = b.match(/POSTER\s*=\s*"([^"]+)"/);
-      out.push({ server: 'Hindi HLS', link: srcM[1], type: 'hls', poster: pM ? pM[1] : null });
+    if (direct) {
+      let langs = [];
+      if (direct.indexOf('zhls') >= 0) {
+        const pl = await fetchPage(direct);
+        langs = playlistLanguages(pl);
+      }
+      out.push({ server: 'Hindi HLS', link: direct, type: 'hls', poster: pickPoster(b), languages: langs });
     }
     if (emM) {
       const b2 = await fetchPage(emM[0]);
-      const s2 = b2.match(/SRC\s*=\s*"([^"]+\.m3u8[^"]*)"/);
-      if (s2) {
-        const p2 = b2.match(/POSTER\s*=\s*"([^"]+)"/);
-        out.push({ server: 'Hindi HLS 2', link: s2[1], type: 'hls', poster: p2 ? p2[1] : null });
-      }
-      out.push({ server: 'Player', link: emM[0], type: 'embed' });
+      const d2 = pickSrc(b2);
+      if (d2 && d2 !== direct) out.push({ server: 'Hindi HLS 2', link: d2, type: 'hls', poster: pickPoster(b2) });
     }
     if (!out.length) out.push({ server: 'AnimeSalt 1', link: zurl, type: 'embed' });
   }
@@ -207,11 +208,22 @@ function playlistLanguages(body){
 }
 function pickPoster(body){
   if (!body) return null;
-  var at = body.indexOf('POSTER=');
-  if (at < 0) return null;
-  var q1 = body.indexOf('"', at + 7);
-  var q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
-  return (q1 >= 0 && q2 > q1) ? body.substring(q1 + 1, q2) : null;
+  var TAB = String.fromCharCode(9);
+  var at = body.indexOf('POSTER');
+  while (at >= 0) {
+    var j = at + 6;
+    while (j < body.length && (body.charAt(j) === ' ' || body.charAt(j) === TAB)) j++;
+    if (j < body.length && body.charAt(j) === '=') {
+      j++;
+      while (j < body.length && (body.charAt(j) === ' ' || body.charAt(j) === TAB)) j++;
+      if (j < body.length && body.charAt(j) === '"') {
+        var q2 = body.indexOf('"', j + 1);
+        if (q2 > j) return body.substring(j + 1, q2);
+      }
+    }
+    at = body.indexOf('POSTER', at + 6);
+  }
+  return null;
 }
 function pickMegaplay(body){
   if (!body) return null;
