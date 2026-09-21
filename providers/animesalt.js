@@ -159,9 +159,58 @@ async function streams(id, season, ep){
   return out;
 }
 
-// ---- movie: GET /movies/slug/ (fallback /slug/) — player iframes ----
+// ---- movie: GET /movies/slug/ (fallback /slug/) - iframes -> direct HLS ----
+function trimSlash(s){
+  var p = String(s || '');
+  while (p.charAt(0) === '/') p = p.slice(1);
+  while (p.charAt(p.length - 1) === '/') p = p.slice(0, -1);
+  return p;
+}
+function pickSrc(body){
+  if (!body) return null;
+  var at = body.indexOf('SRC=');
+  while (at >= 0) {
+    var q1 = body.indexOf('"', at + 4);
+    var q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
+    if (q1 >= 0 && q2 > q1) {
+      var u = body.substring(q1 + 1, q2);
+      if (u.indexOf('.m3u8') >= 0) return u;
+    }
+    at = body.indexOf('SRC=', at + 4);
+  }
+  return null;
+}
+function pickPoster(body){
+  if (!body) return null;
+  var at = body.indexOf('POSTER=');
+  if (at < 0) return null;
+  var q1 = body.indexOf('"', at + 7);
+  var q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
+  return (q1 >= 0 && q2 > q1) ? body.substring(q1 + 1, q2) : null;
+}
+function pickMegaplay(body){
+  if (!body) return null;
+  var at = body.indexOf('megaplay');
+  while (at >= 0) {
+    var s = body.lastIndexOf('http', at);
+    if (s >= 0 && at - s < 200) {
+      var e = at;
+      while (e < body.length && body.charAt(e) !== '"' && body.charAt(e) !== "'" && body.charAt(e) !== '<' && body.charAt(e) !== ' ') e++;
+      var u = body.substring(s, e);
+      if (u.indexOf('/e/') >= 0) return u;
+    }
+    at = body.indexOf('megaplay', at + 8);
+  }
+  return null;
+}
+async function fetchMv(url, referer){
+  try {
+    const r = await axios.get(url, { headers: Object.assign({}, UA, { Referer: referer || ('https://' + (GOOD || 'animesalttv.to') + '/') }), timeout: 15000, maxRedirects: 5, validateStatus: null });
+    return typeof r.data === 'string' ? r.data : '';
+  } catch (e) { return ''; }
+}
 async function movie(id){
-  const slug = String(id).replace(/^\/+/, '').replace(/\/+$/, '');
+  const slug = trimSlash(id);
   const paths = ['/movies/' + encodeURIComponent(slug) + '/', '/' + encodeURIComponent(slug) + '/'];
   let $ = null;
   let lastErr = null;
@@ -172,6 +221,7 @@ async function movie(id){
   const title = ($('h1').first().text() || metaOf($, 'og:title') || slug.replace(/-/g, ' ')).replace(/\s+/g, ' ').trim();
   const out = [];
   const seen = {};
+  const frames = [];
   $('iframe').each(function(i, el){
     let src = $(el).attr('src') || $(el).attr('data-src') || '';
     if (!src) return;
@@ -179,8 +229,28 @@ async function movie(id){
     if (src.indexOf('http') !== 0 && src.indexOf('/') === 0 && GOOD) src = 'https://' + GOOD + src;
     if (!src || seen[src] || src.indexOf('recaptcha') >= 0) return;
     seen[src] = 1;
-    out.push({ server: 'AnimeSalt ' + (out.length + 1), link: src });
+    frames.push(src);
   });
+  for (const f of frames) {
+    if (out.length >= 4) break;
+    const b = await fetchMv(f, 'https://' + (GOOD || 'animesalttv.to') + '/');
+    const direct = pickSrc(b);
+    if (direct) {
+      out.push({ server: 'Hindi HLS', link: direct, type: 'hls', poster: pickPoster(b) });
+      const em = pickMegaplay(b);
+      if (em) {
+        const b2 = await fetchMv(em, f);
+        const d2 = pickSrc(b2);
+        if (d2 && d2 !== direct) out.push({ server: 'Hindi HLS 2', link: d2, type: 'hls', poster: pickPoster(b2) });
+      }
+    } else if (f.indexOf('.m3u8') >= 0) {
+      out.push({ server: 'Hindi HLS', link: f, type: 'hls' });
+    } else if (f.indexOf('/video/') >= 0 || f.slice(-4) === '.mp4') {
+      out.push({ server: 'Hindi MP4', link: f, type: 'mp4' });
+    } else {
+      out.push({ server: 'AnimeSalt ' + (out.length + 1), link: f, type: 'embed' });
+    }
+  }
   return { id: slug, title: title, languages: [], stream: out };
 }
 
