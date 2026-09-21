@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Logging
-app.use((req,res,next)=>{
+app.use((req,res,next)=>{ 
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
@@ -52,7 +52,7 @@ function getProvider(id){
 }
 
 // ---------- HEALTH ----------
-app.get('/api/health', (req,res)=>{
+app.get('/api/health', (req,res)=>{ 
   res.json({ status:'ok', providers: Object.keys(providers), time: new Date().toISOString() });
 });
 
@@ -294,6 +294,19 @@ app.get('/api/hindi/movie', async (req,res)=>{
   }catch(e){ console.error('hindi movie error', e.message); res.status(502).json({ ok:false, error:e.message }); }
 });
 
+// ---------- DEBUG: raw fetch inspector (GET only, head capped) ----------
+app.get('/api/hindi/dbg', async (req,res)=>{
+  const u = req.query.u;
+  if(!u || String(u).indexOf('http') !== 0) return res.status(400).json({ ok:false, error:'u required' });
+  try{
+    const r = await axios.get(u, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36', 'Referer': req.query.r || 'https://animesalttv.to/', 'Accept': '*/*' }, timeout: 15000, maxRedirects: 5, validateStatus: null });
+    const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+    let finalUrl = null;
+    try { finalUrl = (r.request && r.request.res && r.request.res.responseUrl) || null; } catch (e2) {}
+    res.json({ ok:true, status: r.status, finalUrl: finalUrl, len: body.length, head: body.slice(0, 8000) });
+  }catch(e){ res.json({ ok:false, error: String(e.message || e) }); }
+});
+
 // ---------- HINDI WATCH (justanime core — real English sub/dub sources) ----------
 app.get('/api/hindi/watch', async (req,res)=>{
   const anilistId = req.query.anilistId || req.query.id;
@@ -417,7 +430,7 @@ app.get('/api/proxy/image', async (req,res)=>{
     const response = await axios.get(url, {
       responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         'Referer': referer,
         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
       },
