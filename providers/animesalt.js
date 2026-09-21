@@ -168,17 +168,34 @@ function trimSlash(s){
 }
 function pickSrc(body){
   if (!body) return null;
+  var BS = String.fromCharCode(92);
   var at = body.indexOf('SRC=');
   while (at >= 0) {
     var q1 = body.indexOf('"', at + 4);
     var q2 = q1 >= 0 ? body.indexOf('"', q1 + 1) : -1;
     if (q1 >= 0 && q2 > q1) {
-      var u = body.substring(q1 + 1, q2);
-      if (u.indexOf('.m3u8') >= 0) return u;
+      var u = body.substring(q1 + 1, q2).split(BS).join('');
+      if (u.indexOf('.m3u8') >= 0 || u.indexOf('zhls') >= 0) return u;
     }
     at = body.indexOf('SRC=', at + 4);
   }
   return null;
+}
+function playlistLanguages(body){
+  var out = [];
+  if (!body) return out;
+  var li = 0;
+  while (li < body.length) {
+    var k = body.indexOf('LANGUAGE="', li);
+    if (k < 0) break;
+    var e2 = body.indexOf('"', k + 10);
+    if (e2 > k) {
+      var code = body.substring(k + 10, e2);
+      if (code && out.indexOf(code) < 0) out.push(code);
+    }
+    li = k + 10;
+  }
+  return out;
 }
 function pickPoster(body){
   if (!body) return null;
@@ -236,7 +253,12 @@ async function movie(id){
     const b = await fetchMv(f, 'https://' + (GOOD || 'animesalttv.to') + '/');
     const direct = pickSrc(b);
     if (direct) {
-      out.push({ server: 'Hindi HLS', link: direct, type: 'hls', poster: pickPoster(b) });
+      var langs = [];
+      if (direct.indexOf('zhls') >= 0) {
+        var pl = await fetchMv(direct, f);
+        langs = playlistLanguages(pl);
+      }
+      out.push({ server: 'Hindi HLS', link: direct, type: 'hls', poster: pickPoster(b), languages: langs });
       const em = pickMegaplay(b);
       if (em) {
         const b2 = await fetchMv(em, f);
@@ -251,7 +273,11 @@ async function movie(id){
       out.push({ server: 'AnimeSalt ' + (out.length + 1), link: f, type: 'embed' });
     }
   }
-  return { id: slug, title: title, languages: [], stream: out };
+  var allLangs = [];
+  for (const s of out) {
+    for (const lg of (s.languages || [])) { if (allLangs.indexOf(lg) < 0) allLangs.push(lg); }
+  }
+  return { id: slug, title: title, languages: allLangs, stream: out };
 }
 
 module.exports = { search, getInfo, episodes, streams, movie };
