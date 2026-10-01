@@ -5007,8 +5007,8 @@ else wire();
 (function(){
 "use strict";
 if (window.__YR4ENGINE) return; window.__YR4ENGINE = 1;
-window.YR_VERSION = "7.2.0";
-try { localStorage.setItem("yrc.ver", "7.2.0"); } catch(e){}
+window.YR_VERSION = "7.3.0";
+try { localStorage.setItem("yrc.ver", "7.3.0"); } catch(e){}
 
 /* ---------- native-first TMDB fetch (APK: AndroidFetch bridge beats CORS proxies) ---------- */
 if (window.nfetch) {
@@ -5196,6 +5196,7 @@ document.addEventListener("error", function (ev) {
   if (img.closest && img.closest("#yrMangaPages")) return;
   if (img.dataset.yrFb) return;
   img.dataset.yrFb = "1";
+  return; /* v7.3: poster-offline fallback removed at user request */
   var title = (img.alt || "").replace(/^\s+|\s+$/g, "") || "Unavailable";
   var fb = document.createElement("div");
   fb.className = "yr-poster-fb";
