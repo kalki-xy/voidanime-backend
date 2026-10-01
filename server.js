@@ -74,14 +74,27 @@ app.get('/api/providers', (req,res)=>{
 
 // ---------- ANILIST TRENDING (like VoidAnime does) ----------
 app.get('/api/trending', async (req,res)=>{
-  const cacheKey = 'trending_anilist';
+  // params: sort=TRENDING_DESC|POPULARITY_DESC|SCORE_DESC|START_DATE_DESC|FAVOURITES_DESC
+  //         country=JP|KR|CN|TW   format=MANGA|NOVEL|ONE_SHOT
+  const ALLOWED = ['TRENDING_DESC','POPULARITY_DESC','SCORE_DESC','START_DATE_DESC','FAVOURITES_DESC'];
+  const sort = String(req.query.sort || 'TRENDING_DESC').toUpperCase();
+  const srt = ALLOWED.includes(sort) ? sort : 'TRENDING_DESC';
+  const country = String(req.query.country || '').toUpperCase();
+  const cn = ['JP','KR','CN','TW'].includes(country) ? country : '';
+  const fmt = String(req.query.format || '').toUpperCase();
+  const fm = ['MANGA','NOVEL','ONE_SHOT'].includes(fmt) ? fmt : '';
+  const perPage = Math.min(Math.max(parseInt(req.query.limit||'24',10)||24, 1), 50);
+  const cacheKey = 'trending_anilist_' + srt + '_' + cn + '_' + fm + '_' + perPage;
   const cached = cache.get(cacheKey);
   if(cached) return res.json(cached);
   try{
+    const args = ['type:MANGA', 'sort:'+srt];
+    if(cn) args.push('countryOfOrigin:'+cn);
+    if(fm) args.push('format:'+fm);
     const query = `
       query {
-        Page(perPage: 20) {
-          media(type:MANGA, sort:TRENDING_DESC) {
+        Page(perPage: ${perPage}) {
+          media(${args.join(', ')}) {
             id
             title { english romaji native }
             coverImage { large extraLarge color }
@@ -89,6 +102,7 @@ app.get('/api/trending', async (req,res)=>{
             format
             status
             genres
+            countryOfOrigin
             description
           }
         }
@@ -113,10 +127,11 @@ app.get('/api/trending', async (req,res)=>{
       type: m.format || 'MANGA',
       status: m.status,
       genres: m.genres,
+      country: m.countryOfOrigin,
       description: m.description ? m.description.replace(/<[^>]*>/g,'').slice(0,400) : ''
     }));
-    const result = { results: mapped, data: mapped };
-    cache.set(cacheKey, result, 3600);
+    const result = { results: mapped, data: mapped, sort: srt, country: cn || null, format: fm || null };
+    cache.set(cacheKey, result, 1800);
     res.json(result);
   }catch(e){
     console.error('trending error', e.message);

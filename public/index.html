@@ -2966,7 +2966,7 @@ body[data-navpos="right"] #dynamicIslandContainer {
 
       const url = getEmbedUrl(currentPlaying, activeSrv, currentPlaying.season || 1, currentPlaying.episode || 1);
       mount.innerHTML = `
-        <iframe src="${url}" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" referrerpolicy="no-referrer" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen class="h-full w-full border-0"></iframe>
+        <iframe src="${url}" referrerpolicy="no-referrer" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen class="h-full w-full border-0"></iframe>
       `;
     }
 
@@ -3159,7 +3159,7 @@ body[data-navpos="right"] #dynamicIslandContainer {
     if (window.__yrClips) { try { window.__yrClips(); return; } catch (e) {} }
       container.innerHTML = REELS_DATA.map(r => `
       <div class="relative aspect-[9/16] w-full rounded-3xl border border-white/10 bg-black overflow-hidden shadow-2xl">
-        <iframe src="${r.embed}" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" referrerpolicy="no-referrer" class="h-full w-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        <iframe src="${r.embed}" referrerpolicy="no-referrer" class="h-full w-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
         <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex flex-col justify-end p-5">
           <span class="text-xs font-mono font-bold text-yrc-accent">@${r.channel}</span>
           <h3 class="text-sm font-bold text-white mt-1 leading-snug">${r.title}</h3>
@@ -4074,7 +4074,7 @@ function renderPanel(){
     var url = playURL(g);
     panel.innerHTML =
       '<div class="yr38-top"><button class="yr38-back" data-yr38="back">← Games</button><h3 class="yr38-h">' + esc(g.t) + '</h3></div>' +
-      '<div class="yr38-player" id="yr38Player"><iframe id="yr38Frame" src="' + esc(url) + '" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>' +
+      '<div class="yr38-player" id="yr38Player"><iframe id="yr38Frame" src="' + esc(url) + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>' +
       '<div id="yr38Load" class="yr38-load">Loading game…</div></div>' +
       '<div class="yr38-row">' +
       '<button class="yr38-btn" data-yr38="reload">↻ Reload</button>' +
@@ -5007,8 +5007,8 @@ else wire();
 (function(){
 "use strict";
 if (window.__YR4ENGINE) return; window.__YR4ENGINE = 1;
-window.YR_VERSION = "7.3.0";
-try { localStorage.setItem("yrc.ver", "7.3.0"); } catch(e){}
+window.YR_VERSION = "7.4.0";
+try { localStorage.setItem("yrc.ver", "7.4.0"); } catch(e){}
 
 /* ---------- native-first TMDB fetch (APK: AndroidFetch bridge beats CORS proxies) ---------- */
 if (window.nfetch) {
@@ -6271,10 +6271,10 @@ body { background-color: transparent !important; }
   var chapterModal = document.getElementById("yrMangaChapModal");
   var reader = document.getElementById("yrMangaReader");
   var tablist = document.getElementById("yrMangaTabs");
-  var playerSandbox = "allow-scripts allow-same-origin allow-forms allow-presentation";
+  var playerSandbox = ""; /* v7.4: sandbox removed - players were refusing to play */
   ["yrAnimeFrame", "yrEpFrame"].forEach(function (id) {
     var frame = document.getElementById(id);
-    if (frame) frame.setAttribute("sandbox", playerSandbox);
+    if (frame) try{frame.removeAttribute("sandbox");}catch(e){}
   });
   [chapterModal, reader].forEach(function (overlay) {
     if (overlay && overlay.parentElement !== document.body) document.body.appendChild(overlay);
@@ -6840,4 +6840,275 @@ body { background-color: transparent !important; }
 </script>
 
 </body>
+<script id="yrcine-v74-nosandbox">
+(function(){
+  function strip(root){
+    try {
+      var frames = (root.querySelectorAll ? root.querySelectorAll('iframe') : []);
+      for (var i=0;i<frames.length;i++) if (frames[i].hasAttribute('sandbox')) frames[i].removeAttribute('sandbox');
+      if (root.tagName === 'IFRAME' && root.hasAttribute('sandbox')) root.removeAttribute('sandbox');
+    } catch(e){}
+  }
+  // ignore any attempt to (re)add sandbox to an iframe
+  try {
+    var orig = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function(name, value){
+      if (String(name).toLowerCase() === 'sandbox' && this.tagName === 'IFRAME') return;
+      return orig.apply(this, arguments);
+    };
+  } catch(e){}
+  function boot(){
+    strip(document);
+    if (window.MutationObserver) new MutationObserver(function(muts){
+      for (var i=0;i<muts.length;i++){
+        var added = muts[i].addedNodes;
+        for (var j=0;j<added.length;j++) strip(added[j]);
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+    // belt & suspenders: sweep periodically for the first few seconds
+    var k = 0, iv = setInterval(function(){ strip(document); if (++k > 20) clearInterval(iv); }, 400);
+  }
+  var d = document;
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+
+<style id="yrcine-v74-manga-css">
+/* v7.4 : backend-driven manga (Manga / Manhwa / Manhua + rails) */
+#mangaGrid, #yrMangaTabs, #yrPaneMP, #yrPaneWC, #yrPaneMF { display:none !important; }
+#viewManga > .mb-6 { display:none !important; } /* hide the old duplicate header */
+.yr-mg-status{font:800 9px 'JetBrains Mono',monospace;letter-spacing:1.4px;padding:5px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.6)}
+.yr-mg-status.ok{border-color:rgba(16,185,129,.5);color:#34d399;background:rgba(16,185,129,.1)}
+.yr-mg-status.bad{border-color:rgba(239,68,68,.5);color:#f87171;background:rgba(239,68,68,.1)}
+.yr-mg-searchbar{display:flex;gap:8px;margin:16px 0 6px}
+.yr-mg-searchbar input{flex:1;border-radius:99px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;padding:11px 16px;font:600 13px 'Plus Jakarta Sans',sans-serif;outline:none}
+.yr-mg-searchbar input:focus{border-color:var(--yrc-accent)}
+.yr-mg-searchbar button{border:none;border-radius:99px;padding:0 20px;font:800 11px 'JetBrains Mono',monospace;letter-spacing:1px;color:#0a0a0f;background:linear-gradient(135deg,var(--yrc-accent,#f5b942),#ffd97a);cursor:pointer}
+.yr-mg-divs{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+.yr-mg-div{border-radius:99px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);color:rgba(255,255,255,.65);padding:9px 18px;font:800 11px 'JetBrains Mono',monospace;letter-spacing:1.4px;cursor:pointer;transition:.2s}
+.yr-mg-div.on{border-color:transparent;background:linear-gradient(135deg,var(--yrc-accent,#f5b942),#ffd97a);color:#0a0a0f}
+.yr-mg-rail{margin:22px 0}
+.yr-mg-railhead{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.yr-mg-railhead h3{font:800 12px 'JetBrains Mono',monospace;letter-spacing:1.8px;color:rgba(255,255,255,.92)}
+.yr-mg-railhead::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(245,185,66,.4),transparent)}
+.yr-mg-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+.yr-mg-row::-webkit-scrollbar{display:none}
+.yr-mg-card{flex:0 0 118px;cursor:pointer;transition:transform .2s}
+.yr-mg-card:active{transform:scale(.96)}
+.yr-mg-card .art{position:relative;width:118px;height:168px;border-radius:12px;overflow:hidden;background:#141419;border:1px solid rgba(255,255,255,.08)}
+.yr-mg-card .art img{width:100%;height:100%;object-fit:cover}
+.yr-mg-card .t{margin-top:7px;font:700 11px/1.35 'Plus Jakarta Sans',sans-serif;color:rgba(255,255,255,.92);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.yr-mg-card .s{margin-top:2px;font:700 9px 'JetBrains Mono',monospace;color:rgba(255,255,255,.42)}
+.yr-mg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(min-width:640px){.yr-mg-grid{grid-template-columns:repeat(5,1fr)}}
+.yr-mg-grid .yr-mg-card{flex:none}
+.yr-mg-grid .yr-mg-card .art{width:100%;height:auto;aspect-ratio:2/3}
+.yr-mg-msg{padding:40px 0;text-align:center;font:700 11px 'JetBrains Mono',monospace;letter-spacing:1.4px;color:rgba(255,255,255,.4)}
+.yr-mg-skel{flex:0 0 118px;width:118px;height:168px;border-radius:12px;background:linear-gradient(100deg,#15151b 30%,#1e1e26 50%,#15151b 70%);background-size:200% 100%;animation:yrmsh2 1.2s infinite}
+@keyframes yrmsh2{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* detail + reader */
+#yrMgModal{position:fixed;inset:0;z-index:160;display:none;align-items:flex-end;justify-content:center;background:rgba(3,3,6,.86);backdrop-filter:blur(6px)}
+#yrMgModal.on{display:flex}
+#yrMgModal .sheet{width:100%;max-width:640px;max-height:90vh;overflow-y:auto;background:#0e0f14;border:1px solid rgba(255,255,255,.12);border-radius:22px 22px 0 0;padding:18px}
+#yrMgModal .hd{display:flex;gap:14px}
+#yrMgModal .hd img{width:92px;height:130px;object-fit:cover;border-radius:12px;background:#16161c}
+#yrMgModal h2{font:800 19px/1.25 'Plus Jakarta Sans',sans-serif;color:#fff}
+#yrMgModal .desc{margin-top:8px;font:500 12px/1.6 'Plus Jakarta Sans',sans-serif;color:rgba(255,255,255,.6);max-height:96px;overflow:hidden}
+#yrMgChapList{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.yr-mg-chap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);cursor:pointer;font:700 12px 'Plus Jakarta Sans',sans-serif;color:rgba(255,255,255,.85)}
+.yr-mg-chap:active{background:rgba(255,255,255,.09)}
+.yr-mg-chap span{font:700 9px 'JetBrains Mono',monospace;color:rgba(255,255,255,.4)}
+#yrMgReader{position:fixed;inset:0;z-index:200;display:none;background:#000;overflow-y:auto}
+#yrMgReader.on{display:block}
+#yrMgReader .bar{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(6,6,9,.94);border-bottom:1px solid rgba(255,255,255,.1)}
+#yrMgReader .bar b{font:800 11px 'JetBrains Mono',monospace;color:#fff}
+#yrMgReader .bar button{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;padding:7px 13px;font:700 11px 'JetBrains Mono',monospace}
+#yrMgReader img{display:block;width:100%;max-width:860px;margin:0 auto;min-height:40vh;background:#101015}
+</style>
+<script id="yrcine-v74-manga-js">
+(function(){
+  var CFG = window.YRCINE_CONFIG || {};
+  var BASE = (CFG.relayBase || '').replace(/\/$/, '') || (location.origin && location.origin.indexOf('http') === 0 ? location.origin : '');
+  function api(path){
+    var url = path.indexOf('http') === 0 ? path : (BASE + path);
+    var p = (window.nfetch ? window.nfetch(url).catch(function(){ return null; }) : Promise.resolve(null));
+    return p.then(function(b){
+      if (b){ try { return JSON.parse(b); } catch(e){} }
+      return fetch(url, { headers: { accept: 'application/json' } }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+    });
+  }
+  function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function img(u){ return u || ''; }
+
+  var DIVS = [
+    { id:'JP', label:'MANGA',  provider:'mangapill',  country:'JP' },
+    { id:'KR', label:'MANHWA', provider:'manganato',  country:'KR' },
+    { id:'CN', label:'MANHUA', provider:'manganato',  country:'CN' }
+  ];
+  var div = 'JP';
+  function providerFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].provider; return 'mangapill'; }
+
+  function card(it){
+    var cover = img(it.coverUrl || it.coverImage || it.imageUrl);
+    var sub = it.score ? (Number(it.score).toFixed(1) + ' ★') : (it.format || '');
+    return '<div class="yr-mg-card" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '">' +
+      '<div class="art"><img loading="lazy" decoding="async" src="' + esc(cover) + '" alt=""></div>' +
+      '<div class="t">' + esc(it.title) + '</div>' +
+      '<div class="s">' + esc(sub) + '</div></div>';
+  }
+
+  function rails(){
+    var box = document.getElementById('yrMgRails');
+    if (!box) return;
+    box.innerHTML =
+      '<div class="yr-mg-rail" data-sort="TRENDING_DESC"><div class="yr-mg-railhead"><h3>TRENDING</h3></div><div class="yr-mg-row">' + skels() + '</div></div>' +
+      '<div class="yr-mg-rail" data-sort="POPULARITY_DESC"><div class="yr-mg-railhead"><h3>TOP MONTHLY</h3></div><div class="yr-mg-row">' + skels() + '</div></div>' +
+      '<div class="yr-mg-rail" data-sort="SCORE_DESC"><div class="yr-mg-railhead"><h3>TOP RATED</h3></div><div class="yr-mg-row">' + skels() + '</div></div>' +
+      '<div class="yr-mg-rail" data-sort="START_DATE_DESC"><div class="yr-mg-railhead"><h3>NEW RELEASES</h3></div><div class="yr-mg-row">' + skels() + '</div></div>';
+    var d = DIVS.filter(function(x){ return x.id===div; })[0];
+    box.querySelectorAll('.yr-mg-rail').forEach(function(r){
+      api('/api/trending?sort=' + r.getAttribute('data-sort') + '&country=' + d.country + '&limit=18').then(function(j){
+        var items = (j && (j.results || j.data)) || [];
+        var row = r.querySelector('.yr-mg-row');
+        if (!row) return;
+        if (!items.length){ row.innerHTML = '<div class="yr-mg-msg">UNAVAILABLE</div>'; return; }
+        row.innerHTML = items.slice(0,18).map(card).join('');
+      });
+    });
+  }
+  function skels(){ var h=''; for (var i=0;i<6;i++) h += '<div class="yr-mg-skel"></div>'; return h; }
+
+  function setStatus(ok, txt){
+    var el = document.getElementById('yrMgStatus');
+    if (!el) return;
+    el.className = 'yr-mg-status ' + (ok ? 'ok' : 'bad');
+    el.textContent = txt;
+  }
+
+  function search(q){
+    var res = document.getElementById('yrMgResults');
+    if (!res) return;
+    if (!q){ res.innerHTML=''; res.classList.add('hidden'); return; }
+    res.classList.remove('hidden');
+    res.innerHTML = '<div class="yr-mg-railhead" style="margin-top:6px"><h3>RESULTS</h3></div><div class="yr-mg-grid" id="yrMgSearchGrid"><div class="yr-mg-msg">SEARCHING…</div></div>';
+    var provs = ['mangapill','manganato','mangataro'];
+    var seen = {}, out = [], done = 0;
+    provs.forEach(function(p){
+      api('/api/scrape/search?query=' + encodeURIComponent(q) + '&provider=' + p).then(function(j){
+        var list = (j && (j.results || j.data || j.items)) || [];
+        list.forEach(function(r){
+          if (!r || !r.title) return;
+          var k = String(r.title).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+          if (seen[k]) return;
+          seen[k] = 1;
+          out.push({ id:r.id, title:r.title, coverUrl:r.coverUrl||r.coverImage, provider:p });
+        });
+        if (++done === provs.length){
+          var g = document.getElementById('yrMgSearchGrid');
+          if (!g) return;
+          g.innerHTML = out.length ? out.map(card).join('') : '<div class="yr-mg-msg" style="grid-column:1/-1">NO RESULTS</div>';
+        }
+      });
+    });
+  }
+
+  /* detail */
+  function openDetail(id, title, prov){
+    var m = document.getElementById('yrMgModal');
+    m.classList.add('on');
+    document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">LOADING…</div>';
+    document.getElementById('yrMgModalTitle').textContent = title || '';
+    document.getElementById('yrMgModalCover').src = '';
+    document.getElementById('yrMgModalDesc').textContent = '';
+    api('/api/scrape/info?id=' + encodeURIComponent(id) + '&provider=' + prov).then(function(j){
+      var d = (j && (j.data || j.manga)) || {};
+      if (d.coverUrl) document.getElementById('yrMgModalCover').src = d.coverUrl;
+      if (d.description) document.getElementById('yrMgModalDesc').textContent = d.description;
+      var chs = d.chapters || [];
+      var list = document.getElementById('yrMgChapList');
+      if (!chs.length){ list.innerHTML = '<div class="yr-mg-msg">NO CHAPTERS FOUND</div>'; return; }
+      list.innerHTML = chs.map(function(c){
+        return '<div class="yr-mg-chap" data-ch="' + esc(c.id) + '" data-num="' + esc(c.number||'') + '">' + esc(c.title || ('Chapter ' + (c.number||''))) + '<span>' + esc(c.date||'') + '</span></div>';
+      }).join('');
+      list._prov = prov; list._mid = id;
+    });
+  }
+
+  function read(chapterId, number, prov, mid){
+    var r = document.getElementById('yrMgReader');
+    r.classList.add('on');
+    document.getElementById('yrMgReaderPages').innerHTML = '<div class="yr-mg-msg" style="color:#fff">LOADING PAGES…</div>';
+    var q = '/api/scrape/pages?id=' + encodeURIComponent(mid || '') + '&chapterNumber=' + encodeURIComponent(number || '') + '&chapterId=' + encodeURIComponent(chapterId || '') + '&provider=' + prov;
+    api(q).then(function(j){
+      var pages = (j && (j.pages || j.images || j.data)) || [];
+      var box = document.getElementById('yrMgReaderPages');
+      if (!pages.length){ box.innerHTML = '<div class="yr-mg-msg" style="color:#fff">COULD NOT LOAD PAGES</div>'; return; }
+      box.innerHTML = pages.map(function(u){ return '<img loading="lazy" decoding="async" src="' + esc(u) + '" alt="">'; }).join('');
+    });
+  }
+
+  function mount(){
+    var view = document.getElementById('viewManga');
+    if (!view || document.getElementById('yrMgRoot')) return;
+    var root = document.createElement('div');
+    root.id = 'yrMgRoot';
+    root.innerHTML =
+      '<div class="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4" style="margin-top:4px">' +
+      '<div><span style="font:800 10px ui-monospace,monospace;letter-spacing:2px;color:#34d399">MANGA · MANHWA · MANHUA</span>' +
+      '<h1 class="font-caveat text-4xl sm:text-5xl font-bold text-white">Manga Library</h1></div>' +
+      '<div id="yrMgStatus" class="yr-mg-status">CHECKING…</div></div>' +
+      '<div class="yr-mg-searchbar"><input id="yrMgQ" type="search" placeholder="Search manga, manhwa, manhua…"><button id="yrMgGo">SEARCH</button></div>' +
+      '<div class="yr-mg-divs" id="yrMgDivs">' +
+      DIVS.map(function(d,i){ return '<button class="yr-mg-div' + (i===0?' on':'') + '" data-div="' + d.id + '">' + d.label + '</button>'; }).join('') +
+      '</div><div id="yrMgResults" class="hidden"></div><div id="yrMgRails"></div>';
+    view.appendChild(root);
+
+    // modal + reader
+    var modal = document.createElement('div');
+    modal.id = 'yrMgModal';
+    modal.innerHTML = '<div class="sheet"><div class="hd"><img id="yrMgModalCover" alt=""><div style="min-width:0;flex:1"><h2 id="yrMgModalTitle"></h2><div class="desc" id="yrMgModalDesc"></div></div></div>' +
+      '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button id="yrMgModalClose" style="border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;padding:7px 13px;font:700 11px ui-monospace,monospace">CLOSE</button></div>' +
+      '<div id="yrMgChapList"></div></div>';
+    document.body.appendChild(modal);
+    var reader = document.createElement('div');
+    reader.id = 'yrMgReader';
+    reader.innerHTML = '<div class="bar"><b>READER</b><button id="yrMgReaderClose">CLOSE ✕</button></div><div id="yrMgReaderPages"></div>';
+    document.body.appendChild(reader);
+
+    // wiring
+    document.getElementById('yrMgGo').onclick = function(){ search(document.getElementById('yrMgQ').value.trim()); };
+    document.getElementById('yrMgQ').addEventListener('keydown', function(e){ if (e.key === 'Enter') search(this.value.trim()); });
+    document.getElementById('yrMgDivs').addEventListener('click', function(e){
+      var b = e.target.closest('.yr-mg-div'); if (!b) return;
+      div = b.getAttribute('data-div');
+      document.querySelectorAll('.yr-mg-div').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      document.getElementById('yrMgResults').classList.add('hidden');
+      rails();
+    });
+    document.getElementById('yrMgModalClose').onclick = function(){ modal.classList.remove('on'); };
+    document.getElementById('yrMgReaderClose').onclick = function(){ reader.classList.remove('on'); document.getElementById('yrMgReaderPages').innerHTML=''; };
+    root.addEventListener('click', function(e){
+      var c = e.target.closest('.yr-mg-card'); if (!c) return;
+      openDetail(c.getAttribute('data-id'), c.getAttribute('data-title'), providerFor());
+    });
+    document.getElementById('yrMgChapList').addEventListener('click', function(e){
+      var c = e.target.closest('.yr-mg-chap'); if (!c) return;
+      var list = document.getElementById('yrMgChapList');
+      read(c.getAttribute('data-ch'), c.getAttribute('data-num'), list._prov, list._mid);
+    });
+
+    // backend status + rails
+    api('/api/health').then(function(j){
+      if (j) setStatus(true, 'BACKEND · ONLINE');
+      else setStatus(false, 'BACKEND · OFFLINE');
+    });
+    rails();
+  }
+
+  var d = document;
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', mount); else mount();
+})();
+</script>
+
 </html>
