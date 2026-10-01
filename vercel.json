@@ -1,13 +1,9 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/relay/[...path].js", "use": "@vercel/edge" },
     { "src": "server.js", "use": "@vercel/node", "config": { "maxDuration": 60 } }
   ],
   "routes": [
-    { "src": "/api/relay/(.*)", "dest": "api/relay/[...path].js" },
-    { "src": "/api/relay", "dest": "api/relay/[...path].js" },
-    { "src": "/api/(.*)", "dest": "server.js" },
     { "src": "/(.*)", "dest": "server.js" }
   ]
 }

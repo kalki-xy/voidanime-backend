@@ -494,6 +494,11 @@ app.get('/api/proxy/image', async (req,res)=>{
   }
 });
 
+// ---------- YRcine relay: no-VPN passthrough for blocked hosts ----------
+// Serves /api/proxy, /api/embed, /api/catalog, /api/image, /api/health-relay.
+// Mounted AFTER the routes above so existing ones (/api/health, /api/proxy/image) win.
+app.use('/api', require('./relay'));
+
 // Root
 app.get('/', (req,res)=>{
   res.send(`
