@@ -5007,8 +5007,8 @@ else wire();
 (function(){
 "use strict";
 if (window.__YR4ENGINE) return; window.__YR4ENGINE = 1;
-window.YR_VERSION = "7.4.0";
-try { localStorage.setItem("yrc.ver", "7.4.0"); } catch(e){}
+window.YR_VERSION = "7.4.1";
+try { localStorage.setItem("yrc.ver", "7.4.1"); } catch(e){}
 
 /* ---------- native-first TMDB fetch (APK: AndroidFetch bridge beats CORS proxies) ---------- */
 if (window.nfetch) {
@@ -6336,9 +6336,12 @@ body { background-color: transparent !important; }
 /* v7.1: TOP-10 rank numbers now render ABOVE the poster card (were behind it) */
 .yrc-rank-number{
   z-index: 20 !important;
-  -webkit-text-stroke: 3px rgba(6,6,10,.62) !important;  /* dark edge -> contrast on any poster */
-  color: var(--yrc-accent,#f5b942) !important;           /* SOLID fill -> unmistakably on top */
-  text-shadow: 0 8px 24px rgba(0,0,0,.65);
+  color: transparent !important;                              /* no fill - see-through glass */
+  -webkit-text-stroke: 1.6px rgba(255,255,255,.42) !important; /* thin glass outline, no colour */
+  -webkit-text-stroke-color: rgba(255,255,255,.42) !important;
+  text-shadow: none !important;
+  filter: blur(0.8px);                                        /* soft glass blur */
+  opacity: .92;
 }
 /* custom text label on home cards */
 .yr-card-label{
