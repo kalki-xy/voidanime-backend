@@ -5007,8 +5007,8 @@ else wire();
 (function(){
 "use strict";
 if (window.__YR4ENGINE) return; window.__YR4ENGINE = 1;
-window.YR_VERSION = "7.4.2";
-try { localStorage.setItem("yrc.ver", "7.4.2"); } catch(e){}
+window.YR_VERSION = "7.5.0";
+try { localStorage.setItem("yrc.ver", "7.5.0"); } catch(e){}
 
 /* ---------- native-first TMDB fetch (APK: AndroidFetch bridge beats CORS proxies) ---------- */
 if (window.nfetch) {
@@ -6571,7 +6571,16 @@ body { background-color: transparent !important; }
     return arr.map(norm).filter(function(x){ return x && x.title && x.audio; });
   }
   function search(q){
-    return api("/search/songs?query=" + encodeURIComponent(q) + "&limit=20").then(pick);
+    var direct = function(){ return api("/search/songs?query=" + encodeURIComponent(q) + "&limit=20").then(pick); };
+    if (RELAY){
+      // backend first (server-side JioSaavn, works on Jio); direct instances as fallback
+      return jget(RELAY + "/api/music/search?q=" + encodeURIComponent(q) + "&limit=20" + RELAY_K).then(function(j){
+        var r = (j && j.results) || [];
+        var list = r.map(function(x){ return { id:String(x.id||''), title:x.title||'', artist:x.artist||'', cover:x.cover||'', audio:x.audio||'', dur:Number(x.dur||0) }; }).filter(function(x){ return x.title && x.audio; });
+        return list.length ? list : direct();
+      }).catch(direct);
+    }
+    return direct();
   }
   function fmt(sec){ sec = Math.round(sec || 0); var m = Math.floor(sec/60), s2 = sec%60; return m + ":" + (s2<10?"0":"")+s2; }
   function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -6944,9 +6953,9 @@ body { background-color: transparent !important; }
   function img(u){ return u || ''; }
 
   var DIVS = [
-    { id:'JP', label:'MANGA',  provider:'mangapill',  country:'JP' },
-    { id:'KR', label:'MANHWA', provider:'manganato',  country:'KR' },
-    { id:'CN', label:'MANHUA', provider:'manganato',  country:'CN' }
+    { id:'JP', label:'MANGA',  provider:'mangapill',   country:'JP', fallback:'manganato' },
+    { id:'KR', label:'MANHWA', provider:'asurascans',  country:'KR', fallback:'manganato' },
+    { id:'CN', label:'MANHUA', provider:'comix',       country:'CN', fallback:'manganato' }
   ];
   var div = 'JP';
   function providerFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].provider; return 'mangapill'; }
@@ -6994,7 +7003,7 @@ body { background-color: transparent !important; }
     if (!q){ res.innerHTML=''; res.classList.add('hidden'); return; }
     res.classList.remove('hidden');
     res.innerHTML = '<div class="yr-mg-railhead" style="margin-top:6px"><h3>RESULTS</h3></div><div class="yr-mg-grid" id="yrMgSearchGrid"><div class="yr-mg-msg">SEARCHING…</div></div>';
-    var provs = ['mangapill','manganato','mangataro'];
+    var provs = ['mangapill','manganato','asurascans','comix','mangataro'];
     var seen = {}, out = [], done = 0;
     provs.forEach(function(p){
       api('/api/scrape/search?query=' + encodeURIComponent(q) + '&provider=' + p).then(function(j){
@@ -7156,5 +7165,27 @@ body { background-color: transparent !important; }
   setTimeout(wire, 1500);
 })();
 </script>
+
+<style id="yrcine-v76-island-dock">
+/* v7.6: make the island dock-position setting WIN on Android (was forced to bottom) */
+body[data-device-mode="android"][data-navpos="top"] #dynamicIslandContainer{
+  top: calc(env(safe-area-inset-top,0px) + 12px) !important;
+  bottom: auto !important; left: 0 !important; right: 0 !important; transform: none !important;
+}
+body[data-device-mode="android"][data-navpos="bottom"] #dynamicIslandContainer{
+  top: auto !important; bottom: calc(env(safe-area-inset-bottom,0px) + 12px) !important;
+  left: 0 !important; right: 0 !important; transform: none !important;
+}
+body[data-device-mode="android"][data-navpos="left"] #dynamicIslandContainer{
+  top: 50% !important; bottom: auto !important; left: 12px !important; right: auto !important;
+  transform: translateY(-50%) !important;
+}
+body[data-device-mode="android"][data-navpos="right"] #dynamicIslandContainer{
+  top: 50% !important; bottom: auto !important; left: auto !important; right: 12px !important;
+  transform: translateY(-50%) !important;
+}
+/* side docks: island should shrink so it fits */
+body[data-navpos="left"] #dynamicIsland, body[data-navpos="right"] #dynamicIsland{ max-width: min(62vw, 320px) !important; }
+</style>
 
 </html>

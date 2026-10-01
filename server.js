@@ -3,6 +3,7 @@ const cors = require('cors');
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const path = require('path');
+const crypto = require('crypto');
 
 // Plain top-level requires so @vercel/node (ncc) bundles them — placeholder stubs keep missing ones loadable
 const mangadexProvider = require('./providers/mangadex');
@@ -11,6 +12,7 @@ const manganatoProvider = require('./providers/manganato');
 const toonilyProvider = require('./providers/toonily');
 const mangataroProvider = require('./providers/mangataro');
 const animesaltProvider = require('./providers/animesalt');
+const mangascrape = require('./providers/mangascrape'); // manhwa/manhua via MangaScrapeAPI
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -42,6 +44,8 @@ const providers = {};
 [
   ['mangadex', mangadexProvider], ['mangapill', mangapillProvider], ['manganato', manganatoProvider], ['toonily', toonilyProvider], ['mangataro', mangataroProvider]
 ].forEach(([k, v]) => { if (v) providers[k] = v; });
+// manhwa / manhua providers (proxied through MangaScrapeAPI)
+if (mangascrape) Object.keys(mangascrape).forEach((k) => { if (mangascrape[k]) providers[k] = mangascrape[k]; });
 
 // Helper to get provider (stubs fall back to the first real provider)
 function getProvider(id){
@@ -64,7 +68,11 @@ app.get('/api/providers', (req,res)=>{
     { id:'manganato', name:'Manganato', type:'Scraper', desc:'Huge library, fast' },
     { id:'weebcentral', name:'WeebCentral', type:'Scraper', desc:'Blocked: Cloudflare 403' },
     { id:'mangafire', name:'MangaFire', type:'Scraper', desc:'Blocked: Cloudflare' },
-    { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' }
+    { id:'comick', name:'ComicK', type:'API', desc:'Site shut down (io dead, mirrors fake)' },
+    { id:'asurascans', name:'AsuraScans', type:'Manhwa', desc:'Manhwa (Korean) via MangaScrapeAPI' },
+    { id:'vortexscans', name:'VortexScans', type:'Manhwa', desc:'Manhwa via MangaScrapeAPI' },
+    { id:'comix', name:'Comix', type:'Manhwa+Manhua', desc:'Manhwa/Manhua via MangaScrapeAPI' },
+    { id:'mangago', name:'MangaGo', type:'Mixed', desc:'Mixed via MangaScrapeAPI' }
   ];
   res.json({
     providers: all.map(p => Object.assign({}, p, { status: providers[p.id] ? (providers[p.id].__stub ? 'placeholder' : 'working') : 'missing' })),
@@ -227,6 +235,85 @@ app.get('/api/scrape/pages', async (req,res)=>{
     console.error('pages error', providerId, e.message);
     res.json({ error: e.message, pages: [], data: [] });
   }
+});
+
+
+// ---------- MUSIC: JioSaavn (server-side, plain URLs, multi-instance) ----------
+// We do NOT decrypt locally: DES-ECB is disabled in Node 20 (OpenSSL 3), so we
+// proxy JioSaavn API instances that already return plain download URLs, and
+// fall back across several so one being down does not kill music.
+const MUSIC_APIS = [
+  'https://saavn.dev/api',
+  'https://jiosaavn-api-psi.vercel.app/api',
+  'https://jiosavan-api-with-playlist.vercel.app/api'
+];
+function saavnClean(t){
+  return String(t == null ? '' : t)
+    .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+}
+function saavnEntity(s){
+  if(!s) return null;
+  let img = '';
+  if (Array.isArray(s.image) && s.image.length) img = (s.image[s.image.length-1] || {}).url || '';
+  else img = s.image || s.cover || '';
+  let audio = '';
+  if (Array.isArray(s.downloadUrl) && s.downloadUrl.length) audio = (s.downloadUrl[s.downloadUrl.length-1] || {}).url || '';
+  else if (Array.isArray(s.downloadUrls) && s.downloadUrls.length) audio = (s.downloadUrls[s.downloadUrls.length-1] || {}).url || '';
+  else audio = s.media_url || s.url || '';
+  let art = '';
+  if (s.artists && s.artists.primary) art = s.artists.primary.map(function(a){ return a.name; }).join(', ');
+  else if (s.artists && s.artists.all) art = s.artists.all.map(function(a){ return a.name; }).join(', ');
+  else art = s.primary_artists || s.singers || s.subtitle || s.artist || '';
+  return {
+    id: String(s.id || s.songid || ''),
+    title: saavnClean(s.name || s.song || s.title),
+    artist: saavnClean(art),
+    cover: img,
+    audio: audio || '',
+    dur: Number(s.duration || 0),
+    album: saavnClean((s.album && s.album.name) || s.album || ''),
+    language: s.language || ''
+  };
+}
+async function musicFetch(path){
+  for (var i=0;i<MUSIC_APIS.length;i++){
+    try {
+      const r = await axios.get(MUSIC_APIS[i] + path, {
+        timeout: 12000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari/537.36', 'Accept': 'application/json' }
+      });
+      if (r.data) return r.data;
+    } catch(e){ /* next instance */ }
+  }
+  return null;
+}
+app.get('/api/music/search', async (req,res)=>{
+  const q = req.query.q || req.query.query || '';
+  if(!q) return res.status(400).json({ error:'q required' });
+  const limit = Math.min(Math.max(parseInt(req.query.limit||'20',10)||20,1),40);
+  const cacheKey = 'music:search:' + q.toLowerCase() + ':' + limit;
+  const cached = cache.get(cacheKey);
+  if(cached) return res.json(cached);
+  const j = await musicFetch('/search/songs?query=' + encodeURIComponent(q) + '&limit=' + limit);
+  const arr = (j && ((j.data && (j.data.results || j.data.songs)) || j.results || j.songs)) || [];
+  const results = (Array.isArray(arr) ? arr : []).map(saavnEntity).filter(x => x && x.title && x.audio);
+  const payload = { results, data: results, source: 'jiosaavn', count: results.length };
+  if(results.length) cache.set(cacheKey, payload, 300);
+  res.json(payload);
+});
+app.get('/api/music/song', async (req,res)=>{
+  const id = req.query.id;
+  if(!id) return res.status(400).json({ error:'id required' });
+  const cacheKey = 'music:song:' + id;
+  const cached = cache.get(cacheKey);
+  if(cached) return res.json(cached);
+  const j = await musicFetch('/songs/' + encodeURIComponent(id));
+  const one = (j && ((j.data && (Array.isArray(j.data) ? j.data[0] : j.data)) || (Array.isArray(j) ? j[0] : j))) || null;
+  const norm = saavnEntity(one);
+  const payload = { song: norm, data: norm, results: norm ? [norm] : [] };
+  if(norm) cache.set(cacheKey, payload, 600);
+  res.json(payload);
 });
 
 // ---------- MANGADEX DIRECT ROUTES (like VoidAnime Go backend) ----------
