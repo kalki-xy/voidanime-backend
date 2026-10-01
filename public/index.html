@@ -6948,10 +6948,10 @@ body { background-color: transparent !important; }
   var div = 'JP';
   function providerFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].provider; return 'mangapill'; }
 
-  function card(it){
+  function card(it, src){
     var cover = img(it.coverUrl || it.coverImage || it.imageUrl);
     var sub = it.score ? (Number(it.score).toFixed(1) + ' ★') : (it.format || '');
-    return '<div class="yr-mg-card" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '">' +
+    return '<div class="yr-mg-card" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '" data-src="' + (src||'provider') + '">' +
       '<div class="art"><img loading="lazy" decoding="async" src="' + esc(cover) + '" alt=""></div>' +
       '<div class="t">' + esc(it.title) + '</div>' +
       '<div class="s">' + esc(sub) + '</div></div>';
@@ -6972,7 +6972,7 @@ body { background-color: transparent !important; }
         var row = r.querySelector('.yr-mg-row');
         if (!row) return;
         if (!items.length){ row.innerHTML = '<div class="yr-mg-msg">UNAVAILABLE</div>'; return; }
-        row.innerHTML = items.slice(0,18).map(card).join('');
+        row.innerHTML = items.slice(0,18).map(function(it){ return card(it, 'trending'); }).join('');
       });
     });
   }
@@ -7006,13 +7006,33 @@ body { background-color: transparent !important; }
         if (++done === provs.length){
           var g = document.getElementById('yrMgSearchGrid');
           if (!g) return;
-          g.innerHTML = out.length ? out.map(card).join('') : '<div class="yr-mg-msg" style="grid-column:1/-1">NO RESULTS</div>';
+          g.innerHTML = out.length ? out.map(function(r){ return card(r, 'provider'); }).join('') : '<div class="yr-mg-msg" style="grid-column:1/-1">NO RESULTS</div>';
         }
       });
     });
   }
 
   /* detail */
+  function openByTitle(title, prov){
+    var m = document.getElementById('yrMgModal');
+    m.classList.add('on');
+    document.getElementById('yrMgModalTitle').textContent = title || '';
+    document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">FINDING ON PROVIDER…</div>';
+    api('/api/scrape/search?query=' + encodeURIComponent(title) + '&provider=' + prov).then(function(j){
+      var list = (j && (j.results || j.data || j.items)) || [];
+      if (!list.length){
+        // try other providers
+        api('/api/scrape/search?query=' + encodeURIComponent(title) + '&provider=manganato').then(function(j2){
+          var l2 = (j2 && (j2.results || j2.data || j2.items)) || [];
+          if (l2.length) openDetail(l2[0].id, title, 'manganato');
+          else document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">NOT FOUND ON PROVIDER</div>';
+        });
+        return;
+      }
+      openDetail(list[0].id, title, prov);
+    });
+  }
+
   function openDetail(id, title, prov){
     var m = document.getElementById('yrMgModal');
     m.classList.add('on');
@@ -7090,7 +7110,9 @@ body { background-color: transparent !important; }
     document.getElementById('yrMgReaderClose').onclick = function(){ reader.classList.remove('on'); document.getElementById('yrMgReaderPages').innerHTML=''; };
     root.addEventListener('click', function(e){
       var c = e.target.closest('.yr-mg-card'); if (!c) return;
-      openDetail(c.getAttribute('data-id'), c.getAttribute('data-title'), providerFor());
+      var src = c.getAttribute('data-src'), id = c.getAttribute('data-id'), title = c.getAttribute('data-title');
+      if (src === 'trending') openByTitle(title, providerFor());
+      else openDetail(id, title, providerFor());
     });
     document.getElementById('yrMgChapList').addEventListener('click', function(e){
       var c = e.target.closest('.yr-mg-chap'); if (!c) return;
