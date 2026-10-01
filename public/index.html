@@ -3334,6 +3334,9 @@ body[data-navpos="right"] #dynamicIslandContainer {
   /* Private Vault & Security Module */
   let enteredPin = "";
   const CORRECT_PIN = "0000";
+  function yrVaultPin(){ try { return localStorage.getItem("yrc.vault.pin") || "0000"; } catch(e){ return "0000"; } }
+  function yrSetVaultPin(p){ try { localStorage.setItem("yrc.vault.pin", String(p||"0000")); } catch(e){} }
+  window.__yrVaultPin = yrVaultPin; window.__yrSetVaultPin = yrSetVaultPin;
 
   function setupVaultModule() {
     if (window.__vaultBound) return;
@@ -3377,7 +3380,7 @@ body[data-navpos="right"] #dynamicIslandContainer {
     });
 
     function verifyPin() {
-      if (enteredPin === CORRECT_PIN) {
+      if (enteredPin === yrVaultPin()) {
         showToast("Vault Unlocked", ICONS.lock);
         document.getElementById("vaultLockScreen")?.classList.add("hidden");
         document.getElementById("vaultUnlockedContent")?.classList.remove("hidden");
@@ -5007,8 +5010,8 @@ else wire();
 (function(){
 "use strict";
 if (window.__YR4ENGINE) return; window.__YR4ENGINE = 1;
-window.YR_VERSION = "7.5.0";
-try { localStorage.setItem("yrc.ver", "7.5.0"); } catch(e){}
+window.YR_VERSION = "7.6.0";
+try { localStorage.setItem("yrc.ver", "7.6.0"); } catch(e){}
 
 /* ---------- native-first TMDB fetch (APK: AndroidFetch bridge beats CORS proxies) ---------- */
 if (window.nfetch) {
@@ -6953,12 +6956,13 @@ body { background-color: transparent !important; }
   function img(u){ return u || ''; }
 
   var DIVS = [
-    { id:'JP', label:'MANGA',  provider:'mangapill',   country:'JP', fallback:'manganato' },
-    { id:'KR', label:'MANHWA', provider:'asurascans',  country:'KR', fallback:'manganato' },
-    { id:'CN', label:'MANHUA', provider:'comix',       country:'CN', fallback:'manganato' }
+    { id:'JP', label:'MANGA',  country:'JP', chain:['mangapill','manganato','mangataro'] },
+    { id:'KR', label:'MANHWA', country:'KR', chain:['manganato','toonily','asurascans','mangataro'] },
+    { id:'CN', label:'MANHUA', country:'CN', chain:['manganato','comix','mangataro'] }
   ];
   var div = 'JP';
-  function providerFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].provider; return 'mangapill'; }
+  function chainFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].chain.slice(); return ['mangapill','manganato']; }
+  function providerFor(){ return chainFor()[0]; }
 
   function card(it, src){
     var cover = img(it.coverUrl || it.coverImage || it.imageUrl);
@@ -7026,44 +7030,49 @@ body { background-color: transparent !important; }
 
   /* detail */
   function openByTitle(title, prov){
+    var chain = chainFor();
+    if (prov && chain.indexOf(prov) < 0) chain.unshift(prov);
     var m = document.getElementById('yrMgModal');
     m.classList.add('on');
     document.getElementById('yrMgModalTitle').textContent = title || '';
-    document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">FINDING ON PROVIDER…</div>';
-    api('/api/scrape/search?query=' + encodeURIComponent(title) + '&provider=' + prov).then(function(j){
-      var list = (j && (j.results || j.data || j.items)) || [];
-      if (!list.length){
-        // try other providers
-        api('/api/scrape/search?query=' + encodeURIComponent(title) + '&provider=manganato').then(function(j2){
-          var l2 = (j2 && (j2.results || j2.data || j2.items)) || [];
-          if (l2.length) openDetail(l2[0].id, title, 'manganato');
-          else document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">NOT FOUND ON PROVIDER</div>';
-        });
-        return;
-      }
-      openDetail(list[0].id, title, prov);
-    });
+    document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">FINDING ON SOURCES…</div>';
+    var i = 0;
+    (function step(){
+      if (i >= chain.length){ document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">NOT FOUND ON ANY SOURCE</div>'; return; }
+      var p = chain[i++];
+      api('/api/scrape/search?query=' + encodeURIComponent(title) + '&provider=' + p).then(function(j){
+        var list = (j && (j.results || j.data || j.items)) || [];
+        if (list.length){ openDetail(list[0].id, title, p, chain); } else { step(); }
+      }).catch(step);
+    })();
   }
 
-  function openDetail(id, title, prov){
+  function openDetail(id, title, prov, chain){
+    chain = chain || chainFor();
+    if (prov && chain.indexOf(prov) < 0) chain.unshift(prov);
     var m = document.getElementById('yrMgModal');
     m.classList.add('on');
     document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">LOADING…</div>';
     document.getElementById('yrMgModalTitle').textContent = title || '';
     document.getElementById('yrMgModalCover').src = '';
     document.getElementById('yrMgModalDesc').textContent = '';
-    api('/api/scrape/info?id=' + encodeURIComponent(id) + '&provider=' + prov).then(function(j){
-      var d = (j && (j.data || j.manga)) || {};
-      if (d.coverUrl) document.getElementById('yrMgModalCover').src = d.coverUrl;
-      if (d.description) document.getElementById('yrMgModalDesc').textContent = d.description;
-      var chs = d.chapters || [];
-      var list = document.getElementById('yrMgChapList');
-      if (!chs.length){ list.innerHTML = '<div class="yr-mg-msg">NO CHAPTERS FOUND</div>'; return; }
-      list.innerHTML = chs.map(function(c){
-        return '<div class="yr-mg-chap" data-ch="' + esc(c.id) + '" data-num="' + esc(c.number||'') + '">' + esc(c.title || ('Chapter ' + (c.number||''))) + '<span>' + esc(c.date||'') + '</span></div>';
-      }).join('');
-      list._prov = prov; list._mid = id;
-    });
+    var i = 0;
+    (function step(){
+      if (i >= chain.length){ document.getElementById('yrMgChapList').innerHTML = '<div class="yr-mg-msg">NO CHAPTERS ON ANY SOURCE</div>'; return; }
+      var p = chain[i++];
+      api('/api/scrape/info?id=' + encodeURIComponent(id) + '&provider=' + p).then(function(j){
+        var d = (j && (j.data || j.manga)) || {};
+        var chs = d.chapters || [];
+        if (!chs.length){ step(); return; }
+        if (d.coverUrl) document.getElementById('yrMgModalCover').src = d.coverUrl;
+        if (d.description) document.getElementById('yrMgModalDesc').textContent = d.description;
+        var list = document.getElementById('yrMgChapList');
+        list.innerHTML = chs.map(function(c){
+          return '<div class="yr-mg-chap" data-ch="' + esc(c.id) + '" data-num="' + esc(c.number||'') + '">' + esc(c.title || ('Chapter ' + (c.number||''))) + '<span>' + esc(c.date||'') + '</span></div>';
+        }).join('');
+        list._prov = p; list._mid = id;
+      }).catch(step);
+    })();
   }
 
   function read(chapterId, number, prov, mid){
@@ -7187,5 +7196,66 @@ body[data-device-mode="android"][data-navpos="right"] #dynamicIslandContainer{
 /* side docks: island should shrink so it fits */
 body[data-navpos="left"] #dynamicIsland, body[data-navpos="right"] #dynamicIsland{ max-width: min(62vw, 320px) !important; }
 </style>
+
+<style id="yrcine-v77-pin-css">
+#yrPinReset{margin-top:12px;background:none;border:none;color:rgba(255,255,255,.5);font:700 10px 'JetBrains Mono',monospace;letter-spacing:1.2px;text-decoration:underline;cursor:pointer}
+#yrPinReset:hover{color:#fb7185}
+#yrPinChange{margin-left:auto;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:7px 12px;font:700 10px 'JetBrains Mono',monospace;letter-spacing:1px;cursor:pointer}
+#yrPinChange:hover{border-color:var(--yrc-accent);color:var(--yrc-accent)}
+</style>
+<script id="yrcine-v77-pin-js">
+(function(){
+  function pin(){ try { return localStorage.getItem('yrc.vault.pin') || '0000'; } catch(e){ return '0000'; } }
+  function setPin(p){ try { localStorage.setItem('yrc.vault.pin', String(p||'0000')); } catch(e){} }
+  function boot(){
+    // 1. lock screen: replace the "Default PIN" hint + add reset
+    try {
+      var ls = document.getElementById('vaultLockScreen');
+      if (ls){
+        var hint = ls.querySelector('.font-mono');
+        // find the hint node that says "Default PIN"
+        var all = ls.querySelectorAll('div');
+        for (var i=0;i<all.length;i++){
+          if (/Default PIN/i.test(all[i].textContent || '')) { all[i].textContent = 'PIN protected \u00b7 4 digits'; }
+        }
+        if (!document.getElementById('yrPinReset')){
+          var b = document.createElement('button');
+          b.id = 'yrPinReset'; b.type = 'button'; b.textContent = 'Forgot PIN? Reset';
+          b.addEventListener('click', function(e){
+            e.stopPropagation();
+            var n = prompt('Set a new 4-digit vault PIN (this clears the old one):', '0000');
+            if (n === null) return;
+            if (!/^\d{4}$/.test(n)) { alert('PIN must be exactly 4 digits'); return; }
+            setPin(n); alert('Vault PIN updated.');
+          });
+          ls.appendChild(b);
+        }
+      }
+    } catch(e){}
+
+    // 2. unlocked vault: add "Change PIN"
+    try {
+      var vh = document.querySelector('#vaultUnlockedContent .yr61-vhead') || document.querySelector('#vaultUnlockedContent > div.mb-6');
+      if (vh && !document.getElementById('yrPinChange')){
+        var c = document.createElement('button');
+        c.id = 'yrPinChange'; c.type = 'button'; c.textContent = 'CHANGE PIN';
+        c.addEventListener('click', function(e){
+          e.stopPropagation();
+          var cur = prompt('Enter your current PIN:'); if (cur === null) return;
+          if (cur !== pin()) { alert('Incorrect PIN'); return; }
+          var np = prompt('Enter a new 4-digit PIN:'); if (np === null) return;
+          if (!/^\d{4}$/.test(np)) { alert('PIN must be exactly 4 digits'); return; }
+          setPin(np); alert('PIN changed.');
+        });
+        var row = vh.querySelector('div') || vh;
+        row.appendChild(c);
+      }
+    } catch(e){}
+  }
+  var d = document;
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
+  setTimeout(boot, 1500); setTimeout(boot, 3500);
+})();
+</script>
 
 </html>
