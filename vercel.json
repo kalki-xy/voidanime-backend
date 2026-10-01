@@ -7,6 +7,7 @@
   "routes": [
     { "src": "/api/relay/(.*)", "dest": "api/relay/[...path].js" },
     { "src": "/api/relay", "dest": "api/relay/[...path].js" },
+    { "src": "/api/(proxy|embed|catalog|image)(/.*)?", "dest": "api/relay/[...path].js" },
     { "src": "/api/(.*)", "dest": "server.js" },
     { "src": "/(.*)", "dest": "server.js" }
   ]
