@@ -7063,6 +7063,44 @@ body { background-color: transparent !important; }
 })();
 </script>
 
+
+<!-- ===== v8.3: hide the dynamic island while the slidebar drawer is open ===== -->
+<style id="yrcine-v83-drawer-css">
+/* The island is position:fixed at z-index 10050 while the drawer is only z-[135],
+   so the expanded nav (Home/Movie) floated OVER the drawer and collided with its
+   "YR" circle and "YRcine/CINEMA" title. Hide the island whenever the drawer is open. */
+#dynamicIslandContainer{ transition: opacity .26s ease, visibility .26s; }
+body.yr-drawer-open #dynamicIslandContainer{
+  opacity:0 !important; visibility:hidden !important; pointer-events:none !important;
+}
+</style>
+<script id="yrcine-v83-drawer-js">
+(function(){
+  function drawerOpen(){
+    var d = document.getElementById("slidebarDrawer");
+    if (!d) return false;
+    var cs = getComputedStyle(d);
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    // open when it is translated into view (right edge well inside the viewport)
+    var r = d.getBoundingClientRect();
+    return r.width > 0 && r.right > 60;
+  }
+  function apply(){
+    try { document.body.classList.toggle("yr-drawer-open", drawerOpen()); } catch(e){}
+  }
+  function boot(){
+    apply();
+    var d = document.getElementById("slidebarDrawer");
+    if (d && window.MutationObserver) {
+      new MutationObserver(apply).observe(d, { attributes:true, attributeFilter:["class","style"] });
+    }
+    setInterval(apply, 600);
+  }
+  var doc = document;
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", boot); else boot();
+})();
+</script>
+
 </body>
 <script id="yrcine-v74-nosandbox">
 (function(){
