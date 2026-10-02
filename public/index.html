@@ -1073,43 +1073,117 @@ html, body {
 }
 
 #dynamicIsland {
-  transition: width 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
-              height 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
-              border-radius 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
-              background 0.3s ease,
-              border-color 0.3s ease,
-              box-shadow 0.4s ease,
-              transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: width 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+              height 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+              border-radius 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+              background 0.35s ease,
+              border-color 0.35s ease,
+              box-shadow 0.45s ease,
+              transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+              max-width 0.55s cubic-bezier(0.32, 0.72, 0, 1);
   will-change: width, height, transform, border-radius;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--yrc-border), 0 0 25px var(--yrc-glow);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 0 28px var(--yrc-glow, rgba(225,29,72,0.25)),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+  background: linear-gradient(180deg, rgba(28,28,32,0.97) 0%, rgba(8,8,10,0.98) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  isolation: isolate;
+}
+#dynamicIsland[data-island-state="playing"] {
+  box-shadow:
+    0 14px 44px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(244,63,94,0.35),
+    0 0 36px rgba(244,63,94,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+}
+#dynamicIsland[data-island-state="expanded"] {
+  max-width: min(96vw, 720px);
+  border-radius: 28px !important;
+}
+#dynamicIsland[data-island-state="compact"] {
+  border-radius: 999px !important;
+}
+#dynamicIsland[data-island-state="alert"] {
+  animation: islandPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes islandPop {
+  0% { transform: scale(0.86); opacity: 0.6; }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 #dynamicIsland::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 20px;
-  right: 20px;
+  left: 16px;
+  right: 16px;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
   pointer-events: none;
+  z-index: 2;
+}
+#dynamicIsland::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.22), transparent 40%, transparent 60%, rgba(244,63,94,0.25));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 1;
 }
 
 /* Sound Wave Equalizer */
 .island-eq-bar {
-  width: 2.5px;
+  width: 3px;
   border-radius: 999px;
-  background: var(--yrc-accent);
-  animation: islandEq 0.75s ease-in-out infinite alternate;
+  background: linear-gradient(180deg, #fb7185, var(--yrc-accent, #e11d48));
+  transform-origin: bottom center;
+  animation: islandEq 0.55s ease-in-out infinite alternate;
+  box-shadow: 0 0 8px rgba(244,63,94,0.45);
 }
-.island-eq-bar:nth-child(1) { height: 6px; animation-delay: 0.05s; }
-.island-eq-bar:nth-child(2) { height: 14px; animation-delay: 0.22s; }
-.island-eq-bar:nth-child(3) { height: 8px; animation-delay: 0.12s; }
-.island-eq-bar:nth-child(4) { height: 13px; animation-delay: 0.34s; }
+.island-eq-bar:nth-child(1) { height: 5px; animation-delay: 0.00s; }
+.island-eq-bar:nth-child(2) { height: 12px; animation-delay: 0.12s; }
+.island-eq-bar:nth-child(3) { height: 7px; animation-delay: 0.24s; }
+.island-eq-bar:nth-child(4) { height: 14px; animation-delay: 0.08s; }
+.island-eq-bar:nth-child(5) { height: 9px; animation-delay: 0.18s; }
 
 @keyframes islandEq {
-  0% { transform: scaleY(0.25); }
-  100% { transform: scaleY(1.25); }
+  0% { transform: scaleY(0.3); opacity: 0.7; }
+  100% { transform: scaleY(1.35); opacity: 1; }
+}
+.island-live-dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52,211,153,0.55);
+  animation: islandLive 1.6s ease-out infinite;
+}
+@keyframes islandLive {
+  0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+  100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+}
+#islandClock {
+  font: 700 10px/1 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.55);
+  min-width: 42px;
+  text-align: right;
+}
+#islandNetLabel {
+  font: 700 8px/1 'JetBrains Mono', monospace;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
 }
 
 .island-alert-active {
@@ -1370,13 +1444,6 @@ body[data-navpos="right"] #dynamicIslandContainer {
           <span class="flex-1 text-left">Music &amp; Synced Lyrics</span>
           <span class="rounded bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">LRCLIB</span>
         </button>
-        <button class="drawer-nav-item flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 font-semibold text-white/70 hover:text-white" data-drawer-nav="videos">
-          <span class="yrc-icon text-red-500">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          </span>
-          <span class="flex-1 text-left">Trending Reels &amp; Shorts</span>
-          <span class="text-[10px] font-mono text-red-400">9:16</span>
-        </button>
         <button class="drawer-nav-item flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 font-semibold text-white/70 hover:text-white" data-drawer-nav="ai">
           <span class="yrc-icon text-purple-400">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
@@ -1514,13 +1581,17 @@ body[data-navpos="right"] #dynamicIslandContainer {
 
     <!-- STATE 2: COMPACT CAPSULE -->
     <div id="islandStateCompact" class="flex items-center justify-between gap-3 px-3.5 py-1.5 w-full">
-      <div class="flex items-center gap-2">
-        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 font-caveat text-sm font-bold text-yrc-accent">YR</span>
-        <span id="compactPageIndicator" class="text-xs font-bold text-white/90 tracking-wide">Home</span>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-gradient-to-br from-white/15 to-white/5 font-caveat text-base font-bold text-yrc-accent shadow-inner">YR</span>
+        <div class="min-w-0">
+          <span id="compactPageIndicator" class="block text-xs font-bold text-white/95 tracking-wide truncate">Home</span>
+          <span id="islandNetLabel">ONLINE</span>
+        </div>
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+      <div class="flex items-center gap-2">
+        <span id="islandClock">--:--</span>
+        <span class="island-live-dot" title="Online"></span>
         <button id="islandSettingsBtn" class="flex h-6 w-6 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-yrc-accent" title="Settings" aria-label="Settings"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3l-.2.1a1.7 1.7 0 0 0-1 1.5V20h-3v-.2a1.7 1.7 0 0 0-1-1.5l-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9l-.1-.2a1.7 1.7 0 0 0-1.5-1H4v-3h.2a1.7 1.7 0 0 0 1.5-1l.1-.2a1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-2 .1.1a1.7 1.7 0 0 0 1.9.3l.2-.1a1.7 1.7 0 0 0 1-1.5V4h3v.2a1.7 1.7 0 0 0 1 1.5l.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9l.1.2a1.7 1.7 0 0 0 1.5 1h.2v3h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></button><svg class="h-3.5 w-3.5 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
       </div>
     </div>
@@ -1529,7 +1600,8 @@ body[data-navpos="right"] #dynamicIslandContainer {
     <div id="islandStatePlaying" class="hidden items-center justify-between gap-3 px-3.5 py-1.5 w-full">
       <div class="flex items-center gap-2.5 min-w-0">
         <!-- Animated Equalizer Bars -->
-        <div class="flex items-end gap-0.5 h-3.5 flex-shrink-0">
+        <div class="flex items-end gap-0.5 h-4 flex-shrink-0" aria-hidden="true">
+          <span class="island-eq-bar"></span>
           <span class="island-eq-bar"></span>
           <span class="island-eq-bar"></span>
           <span class="island-eq-bar"></span>
@@ -1963,7 +2035,37 @@ body[data-navpos="right"] #dynamicIslandContainer {
     </div>
 
     <!-- Unlocked Vault Content -->
-    <div id="vaultUnlockedContent" class="hidden"><div id="yrVaultTabs" style="display:flex;gap:8px;margin:0 0 16px"><div id="yrVaultTabGames" class="yr43-tab on" style="max-width:180px">GAMES</div><div id="yrVaultTabEp" class="yr43-tab" style="max-width:180px">EPORN.ER</div></div><div id="yrVaultEpPane"><div class="yr43-filter"><input id="yrEpSearch" type="search" placeholder="Search Eporn.er..." style="flex:1;min-width:130px"><select id="yrEpOrder"><option value="latest">Latest</option><option value="longest">Longest</option><option value="top-rated">Top rated</option><option value="most-popular">Most viewed</option><option value="top-weekly">Top weekly</option><option value="top-monthly">Top monthly</option></select><button id="yrEpGo" class="yr43-btn acc">SEARCH</button></div><div class="yr43-filter" id="yrEpCats" style="margin-top:-4px"></div><div class="yr43-sec" id="yrEpRailLatestHead">FRESH DROPS</div><div id="yrEpRailLatest" class="yr43-rail"></div><div class="yr43-sec">MOST VIEWED THIS WEEK</div><div id="yrEpRailViews" class="yr43-rail"></div><div class="yr43-sec">ALL-TIME TOP RATED</div><div id="yrEpRailRated" class="yr43-rail"></div><div class="yr43-sec">FULL LIBRARY</div><div id="yrEpGrid" class="yr43-grid"></div></div>
+    <div id="vaultUnlockedContent" class="hidden"><div id="yrVaultTabs" style="display:flex;gap:8px;margin:0 0 16px"><div id="yrVaultTabGames" class="yr43-tab on" style="max-width:180px">🎮 GAMES</div><div id="yrVaultTabEp" class="yr43-tab" style="max-width:180px">🎬 VIDEOS</div><div id="yrVaultTabReels" class="yr43-tab" style="max-width:180px">📱 REELS</div><div id="yrVaultTabDoujin" class="yr43-tab" style="max-width:180px">📚 DOUJIN</div></div><div id="yrVaultEpPane"><div class="yr43-filter"><input id="yrEpSearch" type="search" placeholder="Search Eporn.er..." style="flex:1;min-width:130px"><select id="yrEpOrder"><option value="latest">Latest</option><option value="longest">Longest</option><option value="top-rated">Top rated</option><option value="most-popular">Most viewed</option><option value="top-weekly">Top weekly</option><option value="top-monthly">Top monthly</option></select><button id="yrEpGo" class="yr43-btn acc">SEARCH</button></div><div class="yr43-filter" id="yrEpCats" style="margin-top:-4px"></div><div class="yr43-sec" id="yrEpRailLatestHead">FRESH DROPS</div><div id="yrEpRailLatest" class="yr43-rail"></div><div class="yr43-sec">MOST VIEWED THIS WEEK</div><div id="yrEpRailViews" class="yr43-rail"></div><div class="yr43-sec">ALL-TIME TOP RATED</div><div id="yrEpRailRated" class="yr43-rail"></div><div class="yr43-sec">FULL LIBRARY</div><div id="yrEpGrid" class="yr43-grid"></div></div>
+<div id="yrVaultReelsPane" style="display:none">
+  <div class="mb-3 flex items-center justify-between gap-2">
+    <div>
+      <div style="font:800 10px 'JetBrains Mono',monospace;letter-spacing:1.6px;color:#fb7185">VERTICAL REELS</div>
+      <div style="font:700 14px 'Plus Jakarta Sans',sans-serif;color:#fff">Scroll · Sound on</div>
+    </div>
+    <button id="yrReelsMuteBtn" type="button" style="border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:8px 14px;font:700 11px 'JetBrains Mono',monospace">🔊 SOUND ON</button>
+  </div>
+  <div class="yr-reel-wrap" id="yrAdultReels"></div>
+</div>
+<div id="yrVaultDoujinPane" style="display:none">
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    <div style="flex:1;min-width:140px">
+      <div style="font:800 10px 'JetBrains Mono',monospace;letter-spacing:1.6px;color:#fb7185">DOUJIN / HENTAI</div>
+      <div style="font:700 14px 'Plus Jakarta Sans',sans-serif;color:#fff">Search · Read · nHentai</div>
+    </div>
+    <input id="yrDoujinQ" type="search" placeholder="Search (e.g. english, sole female)…" style="flex:1;min-width:160px;border-radius:99px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;padding:10px 14px;font:600 12px sans-serif;outline:none">
+    <button id="yrDoujinGo" type="button" class="yr43-btn acc" style="border:none;border-radius:12px;background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;font:800 11px monospace;padding:10px 14px;cursor:pointer">SEARCH</button>
+    <button id="yrDoujinPopular" type="button" style="border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:12px;padding:10px 12px;font:700 10px monospace;cursor:pointer">POPULAR</button>
+  </div>
+  <div id="yrDoujinGrid" class="yr43-grid" style="min-height:40vh"></div>
+  <div id="yrDoujinReader" style="display:none;position:fixed;inset:0;z-index:99990;background:#050508;overflow:auto">
+    <div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(5,5,8,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08)">
+      <button id="yrDoujinClose" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;padding:8px 12px;font:800 11px monospace;cursor:pointer">← BACK</button>
+      <div id="yrDoujinReaderTitle" style="flex:1;font:700 13px sans-serif;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <span id="yrDoujinPageInfo" style="font:700 10px monospace;color:rgba(255,255,255,.5)"></span>
+    </div>
+    <div id="yrDoujinPages" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px 40px"></div>
+  </div>
+</div>
       <div class="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
         <div>
           <span class="text-xs font-mono font-bold text-rose-400 uppercase tracking-widest">Unlocked Session</span>
@@ -2530,6 +2632,7 @@ body[data-navpos="right"] #dynamicIslandContainer {
   const islandAlert = document.getElementById("islandStateAlert");
 
   function setDynamicIslandMode(mode, data = {}) {
+    try { window.setDynamicIslandMode = setDynamicIslandMode; } catch(__e){}
     if (!islandEl) return;
 
     if (mode !== "alert") {
@@ -2549,8 +2652,8 @@ body[data-navpos="right"] #dynamicIslandContainer {
     if (mode === "compact") {
       islandCompact.classList.remove("hidden");
       islandCompact.classList.add("flex");
-      islandEl.style.width = "220px";
-      islandEl.style.height = "40px";
+      islandEl.style.width = "248px";
+      islandEl.style.height = "44px";
     } else if (mode === "expanded") {
       islandExpanded.classList.remove("hidden");
       islandExpanded.classList.add("flex");
@@ -2560,8 +2663,8 @@ body[data-navpos="right"] #dynamicIslandContainer {
     } else if (mode === "playing") {
       islandPlaying.classList.remove("hidden");
       islandPlaying.classList.add("flex");
-      islandEl.style.width = "310px";
-      islandEl.style.height = "44px";
+      islandEl.style.width = (window.innerWidth < 380 ? Math.floor(window.innerWidth * 0.92) : 340) + "px";
+      islandEl.style.height = "48px";
 
       if (data.title) {
         document.getElementById("islandPlayingTitle").textContent = data.title;
@@ -2573,8 +2676,8 @@ body[data-navpos="right"] #dynamicIslandContainer {
       islandAlert.classList.remove("hidden");
       islandAlert.classList.add("flex");
       islandEl.classList.add("island-alert-active");
-      islandEl.style.width = "300px";
-      islandEl.style.height = "42px";
+      islandEl.style.width = "320px";
+      islandEl.style.height = "46px";
 
       const iconEl = document.getElementById("islandAlertIcon");
       if (iconEl) iconEl.innerHTML = data.icon || ICONS.spark;
@@ -3385,6 +3488,9 @@ body[data-navpos="right"] #dynamicIslandContainer {
         document.getElementById("vaultLockScreen")?.classList.add("hidden");
         document.getElementById("vaultUnlockedContent")?.classList.remove("hidden");
         loadVaultGallery();
+        try { if (typeof epVaultTab === "function") epVaultTab("games"); } catch(e){}
+        try { setTimeout(function(){ if (window.YRGamesVault) window.YRGamesVault(); }, 50); setTimeout(function(){ if (window.YRGamesVault) window.YRGamesVault(); }, 400); } catch(e){}
+        try { window.dispatchEvent(new Event("hashchange")); } catch(e){}
       } else {
         showToast("Incorrect PIN");
         enteredPin = "";
@@ -3969,7 +4075,7 @@ var SITES = {
   adg: { label: "AdultGames", url: function(slug){ return "https://adultgames.games/play-game/" + slug; } },
   xxx: { label: "XXX Games",  url: function(slug){ return "https://xxxgames.games/start/" + slug; } }
 };
-var GAMES = [{s:"adg",slug:"olivine-lights",id:"208930",t:"Olivine Lights",d:"Rookie trainer uncovers a conspiracy in Olivine city",n:1},{s:"adg",slug:"devil-layer",id:"208928",t:"Devil Layer",d:"Seduce devil girls aiding their comeback to power",n:1},{s:"adg",slug:"succubus-advent-the-ethereal-collapse",id:"208927",t:"Succubus Advent",d:"Island teen battles succubi and ancient malevolence",n:1},{s:"adg",slug:"anime-hot-resort",id:"208925",t:"Anime Hot Resort",d:"Romance anime characters at a tropical resort",n:1},{s:"adg",slug:"an-unconventional-school",id:"208924",t:"An Unconventional School",d:"Romantic visual novel of diverse love journeys"},{s:"adg",slug:"hentai-university",id:"7424",t:"Hentai University",d:"Campus hypnotist gets too involved with everyone"},{s:"adg",slug:"dragon-girl-x-universe",id:"207505",t:"Dragon Girl X Universe",d:"Multiverse journey through the Dragon Ball sagas"},{s:"adg",slug:"welcum-to-the-city",id:"207302",t:"Welcum to the City",d:"Back home with stepmother and her daughter"},{s:"adg",slug:"lucky-monster",id:"206217",t:"Lucky Monster",d:"Reborn as a goblin warrior after casino luck"},{s:"adg",slug:"in-for-a-penny",id:"200788",t:"In For A Penny",d:"Maintain a harem of independent, mysterious women"},{s:"adg",slug:"forgotten-pathways",id:"206544",t:"Forgotten Pathways",d:"Amnesiac hero unravels mysteries in a strange world"},{s:"adg",slug:"beyond-persona",id:"200365",t:"Beyond Persona",d:"Post-breakup dreams blur into a corruption story"},{s:"adg",slug:"distant-horizon",id:"207391",t:"Distant Horizon",d:"Colonist wakes on a ship beside a mystery woman"},{s:"adg",slug:"first-day-primer-dia",id:"459",t:"First Day",d:"Dia's first day at a very friendly workplace"},{s:"adg",slug:"the-guy-in-charge",id:"201136",t:"The Guy in Charge",d:"Returns home to repair broken relationships"},{s:"adg",slug:"the-last-contestant",id:"209459",t:"The Last Contestant",d:"Total Drama island parody, one male contestant"},{s:"adg",slug:"a-wifes-loyalty",id:"209703",t:"A Wife's Loyalty",d:"Marriage tested by the wife's transformation"},{s:"adg",slug:"make-love-not-waagh",id:"200759",t:"Make Love Not Waagh!",d:"Wakes up next to an orc coworker after drinking"},{s:"adg",slug:"polarity",id:"200691",t:"Polarity",d:"Boxer balancing temptation and his career"},{s:"adg",slug:"once-a-porn-a-time",id:"201048",t:"Once a Porn a Time",d:"Abandoned-planet adventure with a princess"},{s:"adg",slug:"photo-hunt",id:"201375",t:"Photo Hunt",d:"Broke photographer turns his camera into money"},{s:"adg",slug:"a-long-summer",id:"200401",t:"A Long Summer",d:"Emily navigates college life and career choices"},{s:"adg",slug:"defense-against-the-dark-arts",id:"200516",t:"Defense Against the Dark Arts",d:"New Dark Arts teacher battles community evil"},{s:"adg",slug:"re-maid",t:"Re: Maid",d:"Steamy hentai story between two Japanese crushes"},{s:"adg",slug:"lustful-college",id:"205716",t:"Lustful College",d:"Lone male student at all-female Yakatato College"},{s:"adg",slug:"sister-sister-sister",id:"200631",t:"Sister, Sister, Sister",d:"Twin sister helps her hopeless virgin brother"},{s:"xxx",slug:"back-to-the-past",id:"208734",t:"Back to the Past",d:"Family Guy parody - older Stewie fixes his past"},{s:"xxx",slug:"attack-on-sluts",id:"208728",t:"Attack on Sluts",d:"Attack on Titan hentai dating RPG parody"},{s:"xxx",slug:"garden-of-venus",id:"208729",t:"Garden of Venus",d:"The only guy in a town of interested women"},{s:"xxx",slug:"orange-smash",id:"208727",t:"Orange Smash",d:"Amnesiac meets a demon girl in a lonely forest"},{s:"adg",slug:"2-love-genex",id:"210223",t:"2 Love Genex"},{s:"adg",slug:"30-year-old-virgin",id:"210225",t:"30 Year Old Virgin"},{s:"adg",slug:"4-kingdoms-supremacy",id:"210058",t:"4 Kingdoms Supremacy"},{s:"adg",slug:"a-diplomatic-mission",id:"207978",t:"A Diplomatic Mission"},{s:"adg",slug:"a-fortnight-at-frenni-fazclaires---2",id:"209791",t:"A Fortnight at Frenni Fazclaire's - 2"},{s:"adg",slug:"a-night-out",id:"210091",t:"A Night Out"},{s:"adg",slug:"a-night-with-yoruichi",id:"209660",t:"A Night With: Yoruichi"},{s:"adg",slug:"a-porn-anthology---ch3",id:"209792",t:"A Porn Anthology - Ch3"},{s:"adg",slug:"a-series-of-changes",id:"209890",t:"A Series of Changes"},{s:"adg",slug:"a-spoonful-of-sugar",id:"209891",t:"A Spoonful of Sugar"},{s:"adg",slug:"a-wife-at-stake---ep5",id:"209663",t:"A Wife at Stake - Ep5"},{s:"adg",slug:"ali-history---ch2",id:"209892",t:"A.L.I History - Ch2"},{s:"adg",slug:"above-the-law",id:"210106",t:"Above the Law"},{s:"adg",slug:"absolute-hypnosis-in-dxd",id:"209746",t:"Absolute Hypnosis in DxD"},{s:"adg",slug:"ace-of-affection",id:"209797",t:"Ace of Affection"},{s:"adg",slug:"agent-17",id:"210195",t:"Agent 17"},{s:"adg",slug:"agent-sherine",id:"209661",t:"Agent Sherine"},{s:"adg",slug:"ahsoker",id:"210165",t:"Ahsoker"},{s:"adg",slug:"ancient-times",id:"209655",t:"Ancient Times"},{s:"adg",slug:"aracelis",id:"210094",t:"Aracelis"},{s:"adg",slug:"aristocunts",id:"210182",t:"Aristocunts"},{s:"adg",slug:"ashes-of-the-sun",id:"210099",t:"Ashes of the Sun"},{s:"adg",slug:"at-the-crossroads-of-life-lily",id:"210164",t:"At the Crossroads of Life: Lily"},{s:"adg",slug:"attempted-redemption---ch2",id:"210184",t:"Attempted Redemption - Ch2"},{s:"adg",slug:"bad-boy-liam-comes-to-visit",id:"210192",t:"Bad Boy Liam Comes to Visit"},{s:"adg",slug:"bad-uncle",id:"209542",t:"Bad Uncle"},{s:"adg",slug:"barbarian-chronicles",id:"208207",t:"Barbarian Chronicles"},{s:"adg",slug:"beach-glass",id:"210169",t:"Beach Glass"},{s:"adg",slug:"become-a-menace",id:"209893",t:"Become a Menace"},{s:"adg",slug:"behemoths-curse",id:"210159",t:"Behemoth's Curse"},{s:"adg",slug:"best-friends---ch45",id:"209581",t:"Best Friends - Ch4.5"},{s:"adg",slug:"between-duty-and-love",id:"209706",t:"Between Duty and Love"},{s:"adg",slug:"bitchy-boss-bimbofication",id:"209702",t:"Bitchy Boss Bimbofication"},{s:"adg",slug:"blood-ties",id:"210150",t:"Blood Ties"},{s:"adg",slug:"blurred-vision",id:"210102",t:"Blurred Vision"},{s:"adg",slug:"bonds-between",id:"209787",t:"Bonds Between"},{s:"adg",slug:"brazen-sonnet",id:"208110",t:"Brazen Sonnet"},{s:"adg",slug:"breed",id:"207976",t:"Breed"},{s:"adg",slug:"breeze-of-passion",id:"210178",t:"Breeze of Passion"},{s:"adg",slug:"call-of-nature",id:"209582",t:"Call of Nature"},{s:"adg",slug:"campus-bonds",id:"209657",t:"Campus Bonds"},{s:"adg",slug:"captainverse---part-2",id:"209540",t:"CaptainVerse - Part 2"},{s:"adg",slug:"cara-in-creekmaw---ep2",id:"208107",t:"Cara in Creekmaw - Ep2"},{s:"adg",slug:"casteen",id:"210138",t:"Casteen"},{s:"adg",slug:"celebrity-hunter",id:"207979",t:"Celebrity Hunter"},{s:"adg",slug:"censored-for-betas",id:"210152",t:"Censored for Betas"},{s:"adg",slug:"companion-of-darkness---season-2---ch10",id:"209670",t:"Companion of Darkness - Season 2 - Ch10"},{s:"adg",slug:"confessions-of-a-sassy-girl",id:"210095",t:"Confessions of a Sassy Girl"},{s:"adg",slug:"conspiracy",id:"210179",t:"Conspiracy"},{s:"adg",slug:"cross-dimension",id:"210193",t:"Cross Dimension"},{s:"adg",slug:"culture-shock---ch3",id:"208002",t:"Culture Shock - Ch3"},{s:"adg",slug:"cum-vampire",id:"208108",t:"Cum Vampire"},{s:"adg",slug:"cursed-forest-quest",id:"210148",t:"Cursed Forest Quest"},{s:"adg",slug:"dj-story",id:"210090",t:"D.J. Story"},{s:"adg",slug:"date-night",id:"210189",t:"Date Night"},{s:"adg",slug:"defending-lydia-collier---part-1",id:"210201",t:"Defending Lydia Collier - Part 1"},{s:"adg",slug:"defending-lydia-collier---part-2",id:"210181",t:"Defending Lydia Collier - Part 2"},{s:"adg",slug:"drifting-into-lust",id:"209749",t:"Drifting into Lust"},{s:"adg",slug:"echoes-of-destiny",id:"209544",t:"Echoes of Destiny"},{s:"adg",slug:"edgefield",id:"209793",t:"Edgefield"},{s:"adg",slug:"egg-maiden",id:"210089",t:"Egg Maiden"},{s:"adg",slug:"eternal-storm",id:"210147",t:"Eternal Storm"},{s:"adg",slug:"flatmate-blowjob",id:"8100",t:"Flatmate Blowjob"},{s:"adg",slug:"fleeting-memories-update-2",id:"209858",t:"Fleeting Memories [Update 2]"},{s:"adg",slug:"fmg-world",id:"209894",t:"FMG World"},{s:"adg",slug:"foggy-hill",id:"210185",t:"Foggy Hill"},{s:"adg",slug:"forbidden-dungeon",id:"210172",t:"Forbidden Dungeon"},{s:"adg",slug:"freshwomen---s2-ep4-part-1",id:"210170",t:"FreshWomen - S2 Ep4 Part 1"},{s:"adg",slug:"freshwomen---season-1",id:"210191",t:"FreshWomen - Season 1"},{s:"adg",slug:"friends-in-need-blue-valentine",id:"209668",t:"Friends in Need: Blue Valentine"},{s:"adg",slug:"friendship-with-benefits-2",id:"207981",t:"Friendship with Benefits 2"},{s:"adg",slug:"futa-dominium",id:"207996",t:"Futa Dominium"},{s:"adg",slug:"futaos",id:"210253",t:"FutaOS"},{s:"adg",slug:"gazonga-chronicles",id:"209666",t:"Gazonga Chronicles"},{s:"adg",slug:"girlfriend-unfettered",id:"208178",t:"Girlfriend Unfettered"},{s:"adg",slug:"girlfriends-revenge",id:"8102",t:"Girlfriend's Revenge"},{s:"adg",slug:"god-tier-academy",id:"210018",t:"God Tier Academy"},{s:"adg",slug:"gothcuck",id:"210168",t:"Gothcuck"},{s:"adg",slug:"gravity-files",id:"210226",t:"Gravity Files"},{s:"adg",slug:"harem-phone-group---ch2",id:"209547",t:"Harem Phone Group - Ch2"},{s:"adg",slug:"helping-the-hotties-storytime",id:"209669",t:"Helping the Hotties: Storytime"},{s:"adg",slug:"her-desire---season-3",id:"210142",t:"Her Desire - Season 3"},{s:"adg",slug:"her-fall",id:"209752",t:"Her Fall"},{s:"adg",slug:"hero-party",id:"209539",t:"Hero Party"},{s:"adg",slug:"hollow-memories",id:"209828",t:"Hollow Memories"},{s:"adg",slug:"house-of-shinobi",id:"209579",t:"House of Shinobi"},{s:"adg",slug:"i-have-known-you",id:"209744",t:"I Have Known You"},{s:"adg",slug:"i-love-your-wife",id:"210141",t:"I Love Your Wife"},{s:"adg",slug:"idle-waifu",id:"210175",t:"Idle Waifu"},{s:"adg",slug:"in-her-service",id:"208101",t:"In Her Service"},{s:"adg",slug:"innocence-or-money---season-1",id:"208145",t:"Innocence or Money - Season 1"},{s:"adg",slug:"into-your-heart",id:"210154",t:"Into Your Heart"},{s:"adg",slug:"irregular-fantasy-world-a-sapphic-adventure---ep5",id:"209585",t:"Irregular Fantasy World: A Sapphic Adventure - Ep5"},{s:"adg",slug:"is-it-wrong-that-i-have-a-thing-for-my-teacher",id:"209790",t:"Is It Wrong That I Have a Thing for My Teacher?"},{s:"adg",slug:"island-of-lust",id:"208111",t:"Island of Lust"},{s:"adg",slug:"its-just-a-game",id:"207980",t:"It's Just a Game"},{s:"adg",slug:"james-ironwood-rises-again",id:"209622",t:"James Ironwood Rises Again"},{s:"adg",slug:"karmasutra",id:"210022",t:"Karmasutra"},{s:"adg",slug:"king-of-sluts",id:"210282",t:"King of Sluts"},{s:"adg",slug:"kings-revolt",id:"210155",t:"King's Revolt"},{s:"adg",slug:"kingsized",id:"210059",t:"KingSized"},{s:"adg",slug:"knocking-up-my-nympho-neighbors",id:"209750",t:"Knocking Up My Nympho Neighbors"},{s:"adg",slug:"leann-sins",id:"210286",t:"Leann Sins"},{s:"adg",slug:"lesbian-academy",id:"209753",t:"Lesbian Academy"},{s:"adg",slug:"lewd-life-with-my-doggy-wife",id:"210171",t:"Lewd Life with My Doggy Wife"},{s:"adg",slug:"lewd-lore-isekai-fantasy",id:"210176",t:"Lewd Lore: Isekai Fantasy"},{s:"adg",slug:"life-replay---ch1-part-1",id:"209738",t:"Life Replay - Ch1 Part 1"},{s:"adg",slug:"lifes-payback",id:"208139",t:"Life's Payback"},{s:"adg",slug:"locked-in-temptation",id:"210055",t:"Locked in Temptation"},{s:"adg",slug:"lok-parody-the-new-adventure---act-1",id:"210103",t:"LOK Parody: The New Adventure - Act 1"},{s:"adg",slug:"lok-parody-the-new-adventure---act-2",id:"210156",t:"LOK Parody: The New Adventure - Act 2"},{s:"adg",slug:"lok-parody-the-new-adventure---act-3",id:"210145",t:"LOK Parody: The New Adventure - Act 3"},{s:"adg",slug:"love-dolls",id:"210183",t:"Love Dolls"},{s:"adg",slug:"lust-theory---season-3---ep4",id:"208106",t:"Lust Theory - Season 3 - Ep4"},{s:"adg",slug:"marnies-moment",id:"209659",t:"Marnie's Moment"},{s:"adg",slug:"medical-special-care-halloween-scream",id:"209754",t:"Medical Special Care: Halloween Scream"},{s:"adg",slug:"midnight-terror",id:"209957",t:"Midnight Terror"},{s:"adg",slug:"milf-games",id:"210151",t:"MILF Games"},{s:"adg",slug:"mirror-mine",id:"210162",t:"Mirror Mine"},{s:"adg",slug:"moonlight",id:"210105",t:"Moonlight"},{s:"adg",slug:"move-the-chains",id:"208032",t:"Move the Chains"},{s:"adg",slug:"mutant-college",id:"210281",t:"Mutant College"},{s:"adg",slug:"my-cat-girl-harem-part-1-sexpansion-1",id:"210096",t:"My Cat Girl Harem [Part 1 Sexpansion 1]"},{s:"adg",slug:"my-dress-up-ntr-unseen-desire",id:"209743",t:"My Dress Up NTR: Unseen Desire"},{s:"adg",slug:"my-loyal-wife",id:"209658",t:"My Loyal Wife"},{s:"adg",slug:"my-neighbor-looks-just-like-elastigirl",id:"208045",t:"My Neighbor Looks Just Like Elastigirl"},{s:"adg",slug:"my-new-paranormal-life",id:"209621",t:"My New Paranormal Life"},{s:"adg",slug:"my-sisters-devious-plot",id:"208118",t:"My Sister's Devious Plot"},{s:"adg",slug:"my-stepmom-is-a-futanari-chemist",id:"208099",t:"My Stepmom is a Futanari Chemist"},{s:"adg",slug:"myth-of-slayer---ch3",id:"209580",t:"Myth of Slayer - Ch3"},{s:"adg",slug:"name88s-triangle---volume-2",id:"210146",t:"Name88's Triangle - Volume 2"},{s:"adg",slug:"naruto-trainer",id:"208039",t:"Naruto Trainer"},{s:"adg",slug:"natasha-naughty-wife",id:"209789",t:"Natasha Naughty Wife"},{s:"adg",slug:"naughty-tail",id:"209705",t:"Naughty Tail"},{s:"adg",slug:"near-hentai-studio-tour",id:"209535",t:"Near Hentai Studio Tour"},{s:"adg",slug:"new-family",id:"210098",t:"New Family"},{s:"adg",slug:"next-summer",id:"210177",t:"Next Summer"},{s:"adg",slug:"no-butts-uncensored",id:"8103",t:"No Butts (uncensored)"},{s:"adg",slug:"northern-lights-the-beginning",id:"210101",t:"Northern Lights: The Beginning"},{s:"adg",slug:"ntr-phone-group---ch2",id:"209546",t:"NTR Phone Group - Ch2"},{s:"adg",slug:"ntred-by-my-friend",id:"210140",t:"NTR'ed by My Friend"},{s:"adg",slug:"one-week-away",id:"209747",t:"One Week Away"},{s:"adg",slug:"our-netorase-story",id:"210092",t:"Our Netorase Story"},{s:"adg",slug:"past-tense---ch1",id:"210187",t:"Past Tense - Ch1"},{s:"adg",slug:"peace-of-mind-watchers-eye-prologue-day-2",id:"209740",t:"Peace of Mind: Watcher's Eye [Prologue Day 2]"},{s:"adg",slug:"plowed",id:"209926",t:"Plowed"},{s:"adg",slug:"portal-porn-demoniums",id:"209619",t:"Portal Porn Demoniums"},{s:"adg",slug:"priscila-secret---ep6",id:"209653",t:"Priscila Secret - Ep6"},{s:"adg",slug:"prison-of-sissy",id:"209788",t:"Prison of Sissy"},{s:"adg",slug:"private-eyes-secret-desires",id:"209654",t:"Private Eyes & Secret Desires"},{s:"adg",slug:"project-spes",id:"210188",t:"Project: S.P.E.S."},{s:"adg",slug:"projekt-passion-kollege-days",id:"210157",t:"Projekt Passion: Kollege Days"},{s:"adg",slug:"punk-2079",id:"209748",t:"Punk 2079"},{s:"adg",slug:"purity-of-blood",id:"210144",t:"Purity of Blood"},{s:"adg",slug:"rear-routine",id:"210100",t:"Rear Routine"},{s:"adg",slug:"rebounding-life---ep3",id:"210186",t:"Rebounding Life - Ep3"},{s:"adg",slug:"red-brim",id:"210023",t:"Red Brim"},{s:"adg",slug:"regressor",id:"209751",t:"Regressor"},{s:"adg",slug:"rise-gaiden",id:"209786",t:"Rise Gaiden"},{s:"adg",slug:"rise-or-fall",id:"209665",t:"Rise or Fall"},{s:"adg",slug:"riverside-cabin---part-1",id:"210088",t:"Riverside Cabin - Part 1"},{s:"adg",slug:"saviour-of-the-wasteland",id:"210224",t:"Saviour of the Wasteland"},{s:"adg",slug:"selara-update-7",id:"208137",t:"Selara [Update 7]"},{s:"adg",slug:"sex-and-fantasy-2-futa-on-female",id:"209543",t:"Sex and Fantasy 2 [Futa on Female]"},{s:"adg",slug:"sex-and-fantasy-2-futa-on-male",id:"209662",t:"Sex and Fantasy 2 [Futa on Male]"},{s:"adg",slug:"shadows-of-summer",id:"210180",t:"Shadows of Summer"},{s:"adg",slug:"shard-of-my-soul",id:"210149",t:"Shard of My Soul"},{s:"adg",slug:"shattered-dreams",id:"209536",t:"Shattered Dreams"},{s:"adg",slug:"shemale-world-update-1",id:"209755",t:"Shemale World [Update 1]"},{s:"adg",slug:"shinigami-brothel",id:"209618",t:"Shinigami brothel"},{s:"adg",slug:"short-ntr-stories",id:"210285",t:"Short NTR Stories"},{s:"adg",slug:"shroud",id:"209859",t:"Shroud"},{s:"adg",slug:"sickimtrack",id:"210153",t:"Sickimtrack"},{s:"adg",slug:"silvia-stone",id:"209583",t:"Silvia Stone"},{s:"adg",slug:"spank-booty-clash",id:"8101",t:"Spank Booty Clash"},{s:"adg",slug:"sparkling-duplicity",id:"210198",t:"Sparkling Duplicity"},{s:"adg",slug:"special-mind-control",id:"210160",t:"Special Mind Control"},{s:"adg",slug:"star-railed",id:"209534",t:"Star Railed"},{s:"adg",slug:"stuck-in-my-game",id:"210097",t:"Stuck in My Game"},{s:"adg",slug:"summer-holidays",id:"210222",t:"Summer Holidays"},{s:"adg",slug:"summer-temptations",id:"210053",t:"Summer Temptations"},{s:"adg",slug:"symphony-of-lust",id:"209707",t:"Symphony of Lust"},{s:"adg",slug:"taboo-university---book-two",id:"209541",t:"Taboo University - Book Two"},{s:"adg",slug:"tales-of-the-eclipse-goblin-encounter",id:"210054",t:"Tales of the Eclipse: Goblin Encounter"},{s:"adg",slug:"tangled-bonds",id:"210139",t:"Tangled Bonds"},{s:"adg",slug:"the-adventurous-couple-tacos---season-1",id:"208043",t:"The Adventurous Couple: TACOS - Season 1"},{s:"adg",slug:"the-art-of-diplomacy-and-love",id:"209798",t:"The Art of Diplomacy and Love"},{s:"adg",slug:"the-better-deal",id:"210158",t:"The Better Deal"},{s:"adg",slug:"the-big-swap",id:"210161",t:"The Big Swap"},{s:"adg",slug:"the-bouncing-agency",id:"208140",t:"The Bouncing Agency"},{s:"adg",slug:"the-call-of-darkness",id:"209667",t:"The Call of Darkness"},{s:"adg",slug:"the-chemist---ep3",id:"209617",t:"The Chemist - Ep3"},{s:"adg",slug:"the-fall-of-galadriel",id:"210190",t:"The Fall of Galadriel"},{s:"adg",slug:"the-lost-love---part-2",id:"210283",t:"The Lost Love - Part 2"},{s:"adg",slug:"the-manor",id:"210107",t:"The Manor"},{s:"adg",slug:"the-nexus",id:"210167",t:"The Nexus"},{s:"adg",slug:"the-pink-answer",id:"210020",t:"The Pink Answer"},{s:"adg",slug:"the-restaurant",id:"207998",t:"The Restaurant"},{s:"adg",slug:"the-shipwreck",id:"209704",t:"The Shipwreck"},{s:"adg",slug:"the-successor---ch2",id:"209745",t:"The Successor - Ch2"},{s:"adg",slug:"thief-of-hearts---part-1",id:"210256",t:"Thief of Hearts - Part 1"},{s:"adg",slug:"thief-of-hearts---part-2",id:"210284",t:"Thief of Hearts - Part 2"},{s:"adg",slug:"three-panels",id:"209584",t:"Three Panels"},{s:"adg",slug:"toxicity",id:"209701",t:"ToxiCity"},{s:"adg",slug:"trap-resort",id:"209742",t:"Trap Resort"},{s:"adg",slug:"true-dedicktive",id:"210163",t:"True DeDICKtive"},{s:"adg",slug:"twenty-worlds-agency---the-stories-of-department-13",id:"208112",t:"Twenty Worlds Agency - The Stories of Department 13"},{s:"adg",slug:"twists-of-my-life-alannas-extended-ending",id:"210199",t:"Twists of My Life: Alanna's Extended Ending"},{s:"adg",slug:"unexpected-consequences",id:"209537",t:"Unexpected Consequences"},{s:"adg",slug:"valenza-family",id:"209741",t:"Valenza Family"},{s:"adg",slug:"valkyrie-the-fall",id:"209586",t:"Valkyrie: The Fall"},{s:"adg",slug:"vault-repopulation",id:"209656",t:"Vault Repopulation"},{s:"adg",slug:"vocaloid-club",id:"209538",t:"Vocaloid Club"},{s:"adg",slug:"webfame",id:"210104",t:"WebFame"},{s:"adg",slug:"wicked-dominion",id:"209795",t:"Wicked Dominion"},{s:"adg",slug:"world-of-secrets",id:"210021",t:"World of Secrets"},{s:"adg",slug:"wrestling-dynasty",id:"209794",t:"Wrestling Dynasty"},{s:"adg",slug:"xsummer",id:"209897",t:"Xsummer"},{s:"adg",slug:"automaton-story",id:"201030",t:"Automaton Story"},{s:"adg",slug:"beauty-contest--full-game",id:"4617",t:"Beauty Contest"},{s:"adg",slug:"big-jane-birthgiving",id:"304",t:"Big Jane Birthgiving"},{s:"adg",slug:"conquered-hearts--new-version-06",id:"4543",t:"Conquered Hearts"},{s:"adg",slug:"creepy-house",id:"205345",t:"Creepy House"},{s:"adg",slug:"graveyard-executioner",id:"100066",t:"Graveyard Executioner"},{s:"adg",slug:"halinas-blowjob",id:"486",t:"Halina's Blowjob"},{s:"adg",slug:"jail-break-2",id:"222",t:"Jail Break"},{s:"adg",slug:"kingdom-of-deception",id:"201160",t:"Kingdom of Deception"},{s:"adg",slug:"klee-prank-adventure",id:"200910",t:"Klee Prank Adventure"},{s:"adg",slug:"lockdown",id:"200548",t:"Lockdown"},{s:"adg",slug:"lonely-catgirl-is-the-purrfect-pussy",id:"200646",t:"Lonely Catgirl Is the Purrfect Pussy"},{s:"adg",slug:"my-bosss-daughter--new-version-01",id:"4255",t:"My Boss's Daughter - New Version 0.1"},{s:"adg",slug:"new-coral-city--new-version-14--fix-season-2",id:"4785",t:"New Coral City"},{s:"adg",slug:"nympho",id:"201317",t:"Nympho"},{s:"adg",slug:"red-lotus-flower",id:"200501",t:"Red Lotus Flower"},{s:"adg",slug:"roommate-corruption",id:"203746",t:"Roommate Corruption"},{s:"adg",slug:"sexy-magic-2-3",id:"646",t:"Sexy Magic 2"},{s:"adg",slug:"summer-in-the-city",id:"207686",t:"Summer In The City"},{s:"adg",slug:"undercover",id:"207839",t:"Undercover"},{s:"adg",slug:"waifuhub--new-december-update-season-3",id:"4288",t:"WaifuHub - New December Update (Season 3)"},{s:"adg",slug:"what-a-legend",id:"200274",t:"What a Legend"},{s:"adg",slug:"xxlove",id:"201981",t:"XXLove"}];
+var GAMES = window.__YR38_GAMES = [{s:"adg",slug:"olivine-lights",id:"208930",t:"Olivine Lights",d:"Rookie trainer uncovers a conspiracy in Olivine city",n:1},{s:"adg",slug:"devil-layer",id:"208928",t:"Devil Layer",d:"Seduce devil girls aiding their comeback to power",n:1},{s:"adg",slug:"succubus-advent-the-ethereal-collapse",id:"208927",t:"Succubus Advent",d:"Island teen battles succubi and ancient malevolence",n:1},{s:"adg",slug:"anime-hot-resort",id:"208925",t:"Anime Hot Resort",d:"Romance anime characters at a tropical resort",n:1},{s:"adg",slug:"an-unconventional-school",id:"208924",t:"An Unconventional School",d:"Romantic visual novel of diverse love journeys"},{s:"adg",slug:"hentai-university",id:"7424",t:"Hentai University",d:"Campus hypnotist gets too involved with everyone"},{s:"adg",slug:"dragon-girl-x-universe",id:"207505",t:"Dragon Girl X Universe",d:"Multiverse journey through the Dragon Ball sagas"},{s:"adg",slug:"welcum-to-the-city",id:"207302",t:"Welcum to the City",d:"Back home with stepmother and her daughter"},{s:"adg",slug:"lucky-monster",id:"206217",t:"Lucky Monster",d:"Reborn as a goblin warrior after casino luck"},{s:"adg",slug:"in-for-a-penny",id:"200788",t:"In For A Penny",d:"Maintain a harem of independent, mysterious women"},{s:"adg",slug:"forgotten-pathways",id:"206544",t:"Forgotten Pathways",d:"Amnesiac hero unravels mysteries in a strange world"},{s:"adg",slug:"beyond-persona",id:"200365",t:"Beyond Persona",d:"Post-breakup dreams blur into a corruption story"},{s:"adg",slug:"distant-horizon",id:"207391",t:"Distant Horizon",d:"Colonist wakes on a ship beside a mystery woman"},{s:"adg",slug:"first-day-primer-dia",id:"459",t:"First Day",d:"Dia's first day at a very friendly workplace"},{s:"adg",slug:"the-guy-in-charge",id:"201136",t:"The Guy in Charge",d:"Returns home to repair broken relationships"},{s:"adg",slug:"the-last-contestant",id:"209459",t:"The Last Contestant",d:"Total Drama island parody, one male contestant"},{s:"adg",slug:"a-wifes-loyalty",id:"209703",t:"A Wife's Loyalty",d:"Marriage tested by the wife's transformation"},{s:"adg",slug:"make-love-not-waagh",id:"200759",t:"Make Love Not Waagh!",d:"Wakes up next to an orc coworker after drinking"},{s:"adg",slug:"polarity",id:"200691",t:"Polarity",d:"Boxer balancing temptation and his career"},{s:"adg",slug:"once-a-porn-a-time",id:"201048",t:"Once a Porn a Time",d:"Abandoned-planet adventure with a princess"},{s:"adg",slug:"photo-hunt",id:"201375",t:"Photo Hunt",d:"Broke photographer turns his camera into money"},{s:"adg",slug:"a-long-summer",id:"200401",t:"A Long Summer",d:"Emily navigates college life and career choices"},{s:"adg",slug:"defense-against-the-dark-arts",id:"200516",t:"Defense Against the Dark Arts",d:"New Dark Arts teacher battles community evil"},{s:"adg",slug:"re-maid",t:"Re: Maid",d:"Steamy hentai story between two Japanese crushes"},{s:"adg",slug:"lustful-college",id:"205716",t:"Lustful College",d:"Lone male student at all-female Yakatato College"},{s:"adg",slug:"sister-sister-sister",id:"200631",t:"Sister, Sister, Sister",d:"Twin sister helps her hopeless virgin brother"},{s:"xxx",slug:"back-to-the-past",id:"208734",t:"Back to the Past",d:"Family Guy parody - older Stewie fixes his past"},{s:"xxx",slug:"attack-on-sluts",id:"208728",t:"Attack on Sluts",d:"Attack on Titan hentai dating RPG parody"},{s:"xxx",slug:"garden-of-venus",id:"208729",t:"Garden of Venus",d:"The only guy in a town of interested women"},{s:"xxx",slug:"orange-smash",id:"208727",t:"Orange Smash",d:"Amnesiac meets a demon girl in a lonely forest"},{s:"adg",slug:"2-love-genex",id:"210223",t:"2 Love Genex"},{s:"adg",slug:"30-year-old-virgin",id:"210225",t:"30 Year Old Virgin"},{s:"adg",slug:"4-kingdoms-supremacy",id:"210058",t:"4 Kingdoms Supremacy"},{s:"adg",slug:"a-diplomatic-mission",id:"207978",t:"A Diplomatic Mission"},{s:"adg",slug:"a-fortnight-at-frenni-fazclaires---2",id:"209791",t:"A Fortnight at Frenni Fazclaire's - 2"},{s:"adg",slug:"a-night-out",id:"210091",t:"A Night Out"},{s:"adg",slug:"a-night-with-yoruichi",id:"209660",t:"A Night With: Yoruichi"},{s:"adg",slug:"a-porn-anthology---ch3",id:"209792",t:"A Porn Anthology - Ch3"},{s:"adg",slug:"a-series-of-changes",id:"209890",t:"A Series of Changes"},{s:"adg",slug:"a-spoonful-of-sugar",id:"209891",t:"A Spoonful of Sugar"},{s:"adg",slug:"a-wife-at-stake---ep5",id:"209663",t:"A Wife at Stake - Ep5"},{s:"adg",slug:"ali-history---ch2",id:"209892",t:"A.L.I History - Ch2"},{s:"adg",slug:"above-the-law",id:"210106",t:"Above the Law"},{s:"adg",slug:"absolute-hypnosis-in-dxd",id:"209746",t:"Absolute Hypnosis in DxD"},{s:"adg",slug:"ace-of-affection",id:"209797",t:"Ace of Affection"},{s:"adg",slug:"agent-17",id:"210195",t:"Agent 17"},{s:"adg",slug:"agent-sherine",id:"209661",t:"Agent Sherine"},{s:"adg",slug:"ahsoker",id:"210165",t:"Ahsoker"},{s:"adg",slug:"ancient-times",id:"209655",t:"Ancient Times"},{s:"adg",slug:"aracelis",id:"210094",t:"Aracelis"},{s:"adg",slug:"aristocunts",id:"210182",t:"Aristocunts"},{s:"adg",slug:"ashes-of-the-sun",id:"210099",t:"Ashes of the Sun"},{s:"adg",slug:"at-the-crossroads-of-life-lily",id:"210164",t:"At the Crossroads of Life: Lily"},{s:"adg",slug:"attempted-redemption---ch2",id:"210184",t:"Attempted Redemption - Ch2"},{s:"adg",slug:"bad-boy-liam-comes-to-visit",id:"210192",t:"Bad Boy Liam Comes to Visit"},{s:"adg",slug:"bad-uncle",id:"209542",t:"Bad Uncle"},{s:"adg",slug:"barbarian-chronicles",id:"208207",t:"Barbarian Chronicles"},{s:"adg",slug:"beach-glass",id:"210169",t:"Beach Glass"},{s:"adg",slug:"become-a-menace",id:"209893",t:"Become a Menace"},{s:"adg",slug:"behemoths-curse",id:"210159",t:"Behemoth's Curse"},{s:"adg",slug:"best-friends---ch45",id:"209581",t:"Best Friends - Ch4.5"},{s:"adg",slug:"between-duty-and-love",id:"209706",t:"Between Duty and Love"},{s:"adg",slug:"bitchy-boss-bimbofication",id:"209702",t:"Bitchy Boss Bimbofication"},{s:"adg",slug:"blood-ties",id:"210150",t:"Blood Ties"},{s:"adg",slug:"blurred-vision",id:"210102",t:"Blurred Vision"},{s:"adg",slug:"bonds-between",id:"209787",t:"Bonds Between"},{s:"adg",slug:"brazen-sonnet",id:"208110",t:"Brazen Sonnet"},{s:"adg",slug:"breed",id:"207976",t:"Breed"},{s:"adg",slug:"breeze-of-passion",id:"210178",t:"Breeze of Passion"},{s:"adg",slug:"call-of-nature",id:"209582",t:"Call of Nature"},{s:"adg",slug:"campus-bonds",id:"209657",t:"Campus Bonds"},{s:"adg",slug:"captainverse---part-2",id:"209540",t:"CaptainVerse - Part 2"},{s:"adg",slug:"cara-in-creekmaw---ep2",id:"208107",t:"Cara in Creekmaw - Ep2"},{s:"adg",slug:"casteen",id:"210138",t:"Casteen"},{s:"adg",slug:"celebrity-hunter",id:"207979",t:"Celebrity Hunter"},{s:"adg",slug:"censored-for-betas",id:"210152",t:"Censored for Betas"},{s:"adg",slug:"companion-of-darkness---season-2---ch10",id:"209670",t:"Companion of Darkness - Season 2 - Ch10"},{s:"adg",slug:"confessions-of-a-sassy-girl",id:"210095",t:"Confessions of a Sassy Girl"},{s:"adg",slug:"conspiracy",id:"210179",t:"Conspiracy"},{s:"adg",slug:"cross-dimension",id:"210193",t:"Cross Dimension"},{s:"adg",slug:"culture-shock---ch3",id:"208002",t:"Culture Shock - Ch3"},{s:"adg",slug:"cum-vampire",id:"208108",t:"Cum Vampire"},{s:"adg",slug:"cursed-forest-quest",id:"210148",t:"Cursed Forest Quest"},{s:"adg",slug:"dj-story",id:"210090",t:"D.J. Story"},{s:"adg",slug:"date-night",id:"210189",t:"Date Night"},{s:"adg",slug:"defending-lydia-collier---part-1",id:"210201",t:"Defending Lydia Collier - Part 1"},{s:"adg",slug:"defending-lydia-collier---part-2",id:"210181",t:"Defending Lydia Collier - Part 2"},{s:"adg",slug:"drifting-into-lust",id:"209749",t:"Drifting into Lust"},{s:"adg",slug:"echoes-of-destiny",id:"209544",t:"Echoes of Destiny"},{s:"adg",slug:"edgefield",id:"209793",t:"Edgefield"},{s:"adg",slug:"egg-maiden",id:"210089",t:"Egg Maiden"},{s:"adg",slug:"eternal-storm",id:"210147",t:"Eternal Storm"},{s:"adg",slug:"flatmate-blowjob",id:"8100",t:"Flatmate Blowjob"},{s:"adg",slug:"fleeting-memories-update-2",id:"209858",t:"Fleeting Memories [Update 2]"},{s:"adg",slug:"fmg-world",id:"209894",t:"FMG World"},{s:"adg",slug:"foggy-hill",id:"210185",t:"Foggy Hill"},{s:"adg",slug:"forbidden-dungeon",id:"210172",t:"Forbidden Dungeon"},{s:"adg",slug:"freshwomen---s2-ep4-part-1",id:"210170",t:"FreshWomen - S2 Ep4 Part 1"},{s:"adg",slug:"freshwomen---season-1",id:"210191",t:"FreshWomen - Season 1"},{s:"adg",slug:"friends-in-need-blue-valentine",id:"209668",t:"Friends in Need: Blue Valentine"},{s:"adg",slug:"friendship-with-benefits-2",id:"207981",t:"Friendship with Benefits 2"},{s:"adg",slug:"futa-dominium",id:"207996",t:"Futa Dominium"},{s:"adg",slug:"futaos",id:"210253",t:"FutaOS"},{s:"adg",slug:"gazonga-chronicles",id:"209666",t:"Gazonga Chronicles"},{s:"adg",slug:"girlfriend-unfettered",id:"208178",t:"Girlfriend Unfettered"},{s:"adg",slug:"girlfriends-revenge",id:"8102",t:"Girlfriend's Revenge"},{s:"adg",slug:"god-tier-academy",id:"210018",t:"God Tier Academy"},{s:"adg",slug:"gothcuck",id:"210168",t:"Gothcuck"},{s:"adg",slug:"gravity-files",id:"210226",t:"Gravity Files"},{s:"adg",slug:"harem-phone-group---ch2",id:"209547",t:"Harem Phone Group - Ch2"},{s:"adg",slug:"helping-the-hotties-storytime",id:"209669",t:"Helping the Hotties: Storytime"},{s:"adg",slug:"her-desire---season-3",id:"210142",t:"Her Desire - Season 3"},{s:"adg",slug:"her-fall",id:"209752",t:"Her Fall"},{s:"adg",slug:"hero-party",id:"209539",t:"Hero Party"},{s:"adg",slug:"hollow-memories",id:"209828",t:"Hollow Memories"},{s:"adg",slug:"house-of-shinobi",id:"209579",t:"House of Shinobi"},{s:"adg",slug:"i-have-known-you",id:"209744",t:"I Have Known You"},{s:"adg",slug:"i-love-your-wife",id:"210141",t:"I Love Your Wife"},{s:"adg",slug:"idle-waifu",id:"210175",t:"Idle Waifu"},{s:"adg",slug:"in-her-service",id:"208101",t:"In Her Service"},{s:"adg",slug:"innocence-or-money---season-1",id:"208145",t:"Innocence or Money - Season 1"},{s:"adg",slug:"into-your-heart",id:"210154",t:"Into Your Heart"},{s:"adg",slug:"irregular-fantasy-world-a-sapphic-adventure---ep5",id:"209585",t:"Irregular Fantasy World: A Sapphic Adventure - Ep5"},{s:"adg",slug:"is-it-wrong-that-i-have-a-thing-for-my-teacher",id:"209790",t:"Is It Wrong That I Have a Thing for My Teacher?"},{s:"adg",slug:"island-of-lust",id:"208111",t:"Island of Lust"},{s:"adg",slug:"its-just-a-game",id:"207980",t:"It's Just a Game"},{s:"adg",slug:"james-ironwood-rises-again",id:"209622",t:"James Ironwood Rises Again"},{s:"adg",slug:"karmasutra",id:"210022",t:"Karmasutra"},{s:"adg",slug:"king-of-sluts",id:"210282",t:"King of Sluts"},{s:"adg",slug:"kings-revolt",id:"210155",t:"King's Revolt"},{s:"adg",slug:"kingsized",id:"210059",t:"KingSized"},{s:"adg",slug:"knocking-up-my-nympho-neighbors",id:"209750",t:"Knocking Up My Nympho Neighbors"},{s:"adg",slug:"leann-sins",id:"210286",t:"Leann Sins"},{s:"adg",slug:"lesbian-academy",id:"209753",t:"Lesbian Academy"},{s:"adg",slug:"lewd-life-with-my-doggy-wife",id:"210171",t:"Lewd Life with My Doggy Wife"},{s:"adg",slug:"lewd-lore-isekai-fantasy",id:"210176",t:"Lewd Lore: Isekai Fantasy"},{s:"adg",slug:"life-replay---ch1-part-1",id:"209738",t:"Life Replay - Ch1 Part 1"},{s:"adg",slug:"lifes-payback",id:"208139",t:"Life's Payback"},{s:"adg",slug:"locked-in-temptation",id:"210055",t:"Locked in Temptation"},{s:"adg",slug:"lok-parody-the-new-adventure---act-1",id:"210103",t:"LOK Parody: The New Adventure - Act 1"},{s:"adg",slug:"lok-parody-the-new-adventure---act-2",id:"210156",t:"LOK Parody: The New Adventure - Act 2"},{s:"adg",slug:"lok-parody-the-new-adventure---act-3",id:"210145",t:"LOK Parody: The New Adventure - Act 3"},{s:"adg",slug:"love-dolls",id:"210183",t:"Love Dolls"},{s:"adg",slug:"lust-theory---season-3---ep4",id:"208106",t:"Lust Theory - Season 3 - Ep4"},{s:"adg",slug:"marnies-moment",id:"209659",t:"Marnie's Moment"},{s:"adg",slug:"medical-special-care-halloween-scream",id:"209754",t:"Medical Special Care: Halloween Scream"},{s:"adg",slug:"midnight-terror",id:"209957",t:"Midnight Terror"},{s:"adg",slug:"milf-games",id:"210151",t:"MILF Games"},{s:"adg",slug:"mirror-mine",id:"210162",t:"Mirror Mine"},{s:"adg",slug:"moonlight",id:"210105",t:"Moonlight"},{s:"adg",slug:"move-the-chains",id:"208032",t:"Move the Chains"},{s:"adg",slug:"mutant-college",id:"210281",t:"Mutant College"},{s:"adg",slug:"my-cat-girl-harem-part-1-sexpansion-1",id:"210096",t:"My Cat Girl Harem [Part 1 Sexpansion 1]"},{s:"adg",slug:"my-dress-up-ntr-unseen-desire",id:"209743",t:"My Dress Up NTR: Unseen Desire"},{s:"adg",slug:"my-loyal-wife",id:"209658",t:"My Loyal Wife"},{s:"adg",slug:"my-neighbor-looks-just-like-elastigirl",id:"208045",t:"My Neighbor Looks Just Like Elastigirl"},{s:"adg",slug:"my-new-paranormal-life",id:"209621",t:"My New Paranormal Life"},{s:"adg",slug:"my-sisters-devious-plot",id:"208118",t:"My Sister's Devious Plot"},{s:"adg",slug:"my-stepmom-is-a-futanari-chemist",id:"208099",t:"My Stepmom is a Futanari Chemist"},{s:"adg",slug:"myth-of-slayer---ch3",id:"209580",t:"Myth of Slayer - Ch3"},{s:"adg",slug:"name88s-triangle---volume-2",id:"210146",t:"Name88's Triangle - Volume 2"},{s:"adg",slug:"naruto-trainer",id:"208039",t:"Naruto Trainer"},{s:"adg",slug:"natasha-naughty-wife",id:"209789",t:"Natasha Naughty Wife"},{s:"adg",slug:"naughty-tail",id:"209705",t:"Naughty Tail"},{s:"adg",slug:"near-hentai-studio-tour",id:"209535",t:"Near Hentai Studio Tour"},{s:"adg",slug:"new-family",id:"210098",t:"New Family"},{s:"adg",slug:"next-summer",id:"210177",t:"Next Summer"},{s:"adg",slug:"no-butts-uncensored",id:"8103",t:"No Butts (uncensored)"},{s:"adg",slug:"northern-lights-the-beginning",id:"210101",t:"Northern Lights: The Beginning"},{s:"adg",slug:"ntr-phone-group---ch2",id:"209546",t:"NTR Phone Group - Ch2"},{s:"adg",slug:"ntred-by-my-friend",id:"210140",t:"NTR'ed by My Friend"},{s:"adg",slug:"one-week-away",id:"209747",t:"One Week Away"},{s:"adg",slug:"our-netorase-story",id:"210092",t:"Our Netorase Story"},{s:"adg",slug:"past-tense---ch1",id:"210187",t:"Past Tense - Ch1"},{s:"adg",slug:"peace-of-mind-watchers-eye-prologue-day-2",id:"209740",t:"Peace of Mind: Watcher's Eye [Prologue Day 2]"},{s:"adg",slug:"plowed",id:"209926",t:"Plowed"},{s:"adg",slug:"portal-porn-demoniums",id:"209619",t:"Portal Porn Demoniums"},{s:"adg",slug:"priscila-secret---ep6",id:"209653",t:"Priscila Secret - Ep6"},{s:"adg",slug:"prison-of-sissy",id:"209788",t:"Prison of Sissy"},{s:"adg",slug:"private-eyes-secret-desires",id:"209654",t:"Private Eyes & Secret Desires"},{s:"adg",slug:"project-spes",id:"210188",t:"Project: S.P.E.S."},{s:"adg",slug:"projekt-passion-kollege-days",id:"210157",t:"Projekt Passion: Kollege Days"},{s:"adg",slug:"punk-2079",id:"209748",t:"Punk 2079"},{s:"adg",slug:"purity-of-blood",id:"210144",t:"Purity of Blood"},{s:"adg",slug:"rear-routine",id:"210100",t:"Rear Routine"},{s:"adg",slug:"rebounding-life---ep3",id:"210186",t:"Rebounding Life - Ep3"},{s:"adg",slug:"red-brim",id:"210023",t:"Red Brim"},{s:"adg",slug:"regressor",id:"209751",t:"Regressor"},{s:"adg",slug:"rise-gaiden",id:"209786",t:"Rise Gaiden"},{s:"adg",slug:"rise-or-fall",id:"209665",t:"Rise or Fall"},{s:"adg",slug:"riverside-cabin---part-1",id:"210088",t:"Riverside Cabin - Part 1"},{s:"adg",slug:"saviour-of-the-wasteland",id:"210224",t:"Saviour of the Wasteland"},{s:"adg",slug:"selara-update-7",id:"208137",t:"Selara [Update 7]"},{s:"adg",slug:"sex-and-fantasy-2-futa-on-female",id:"209543",t:"Sex and Fantasy 2 [Futa on Female]"},{s:"adg",slug:"sex-and-fantasy-2-futa-on-male",id:"209662",t:"Sex and Fantasy 2 [Futa on Male]"},{s:"adg",slug:"shadows-of-summer",id:"210180",t:"Shadows of Summer"},{s:"adg",slug:"shard-of-my-soul",id:"210149",t:"Shard of My Soul"},{s:"adg",slug:"shattered-dreams",id:"209536",t:"Shattered Dreams"},{s:"adg",slug:"shemale-world-update-1",id:"209755",t:"Shemale World [Update 1]"},{s:"adg",slug:"shinigami-brothel",id:"209618",t:"Shinigami brothel"},{s:"adg",slug:"short-ntr-stories",id:"210285",t:"Short NTR Stories"},{s:"adg",slug:"shroud",id:"209859",t:"Shroud"},{s:"adg",slug:"sickimtrack",id:"210153",t:"Sickimtrack"},{s:"adg",slug:"silvia-stone",id:"209583",t:"Silvia Stone"},{s:"adg",slug:"spank-booty-clash",id:"8101",t:"Spank Booty Clash"},{s:"adg",slug:"sparkling-duplicity",id:"210198",t:"Sparkling Duplicity"},{s:"adg",slug:"special-mind-control",id:"210160",t:"Special Mind Control"},{s:"adg",slug:"star-railed",id:"209534",t:"Star Railed"},{s:"adg",slug:"stuck-in-my-game",id:"210097",t:"Stuck in My Game"},{s:"adg",slug:"summer-holidays",id:"210222",t:"Summer Holidays"},{s:"adg",slug:"summer-temptations",id:"210053",t:"Summer Temptations"},{s:"adg",slug:"symphony-of-lust",id:"209707",t:"Symphony of Lust"},{s:"adg",slug:"taboo-university---book-two",id:"209541",t:"Taboo University - Book Two"},{s:"adg",slug:"tales-of-the-eclipse-goblin-encounter",id:"210054",t:"Tales of the Eclipse: Goblin Encounter"},{s:"adg",slug:"tangled-bonds",id:"210139",t:"Tangled Bonds"},{s:"adg",slug:"the-adventurous-couple-tacos---season-1",id:"208043",t:"The Adventurous Couple: TACOS - Season 1"},{s:"adg",slug:"the-art-of-diplomacy-and-love",id:"209798",t:"The Art of Diplomacy and Love"},{s:"adg",slug:"the-better-deal",id:"210158",t:"The Better Deal"},{s:"adg",slug:"the-big-swap",id:"210161",t:"The Big Swap"},{s:"adg",slug:"the-bouncing-agency",id:"208140",t:"The Bouncing Agency"},{s:"adg",slug:"the-call-of-darkness",id:"209667",t:"The Call of Darkness"},{s:"adg",slug:"the-chemist---ep3",id:"209617",t:"The Chemist - Ep3"},{s:"adg",slug:"the-fall-of-galadriel",id:"210190",t:"The Fall of Galadriel"},{s:"adg",slug:"the-lost-love---part-2",id:"210283",t:"The Lost Love - Part 2"},{s:"adg",slug:"the-manor",id:"210107",t:"The Manor"},{s:"adg",slug:"the-nexus",id:"210167",t:"The Nexus"},{s:"adg",slug:"the-pink-answer",id:"210020",t:"The Pink Answer"},{s:"adg",slug:"the-restaurant",id:"207998",t:"The Restaurant"},{s:"adg",slug:"the-shipwreck",id:"209704",t:"The Shipwreck"},{s:"adg",slug:"the-successor---ch2",id:"209745",t:"The Successor - Ch2"},{s:"adg",slug:"thief-of-hearts---part-1",id:"210256",t:"Thief of Hearts - Part 1"},{s:"adg",slug:"thief-of-hearts---part-2",id:"210284",t:"Thief of Hearts - Part 2"},{s:"adg",slug:"three-panels",id:"209584",t:"Three Panels"},{s:"adg",slug:"toxicity",id:"209701",t:"ToxiCity"},{s:"adg",slug:"trap-resort",id:"209742",t:"Trap Resort"},{s:"adg",slug:"true-dedicktive",id:"210163",t:"True DeDICKtive"},{s:"adg",slug:"twenty-worlds-agency---the-stories-of-department-13",id:"208112",t:"Twenty Worlds Agency - The Stories of Department 13"},{s:"adg",slug:"twists-of-my-life-alannas-extended-ending",id:"210199",t:"Twists of My Life: Alanna's Extended Ending"},{s:"adg",slug:"unexpected-consequences",id:"209537",t:"Unexpected Consequences"},{s:"adg",slug:"valenza-family",id:"209741",t:"Valenza Family"},{s:"adg",slug:"valkyrie-the-fall",id:"209586",t:"Valkyrie: The Fall"},{s:"adg",slug:"vault-repopulation",id:"209656",t:"Vault Repopulation"},{s:"adg",slug:"vocaloid-club",id:"209538",t:"Vocaloid Club"},{s:"adg",slug:"webfame",id:"210104",t:"WebFame"},{s:"adg",slug:"wicked-dominion",id:"209795",t:"Wicked Dominion"},{s:"adg",slug:"world-of-secrets",id:"210021",t:"World of Secrets"},{s:"adg",slug:"wrestling-dynasty",id:"209794",t:"Wrestling Dynasty"},{s:"adg",slug:"xsummer",id:"209897",t:"Xsummer"},{s:"adg",slug:"automaton-story",id:"201030",t:"Automaton Story"},{s:"adg",slug:"beauty-contest--full-game",id:"4617",t:"Beauty Contest"},{s:"adg",slug:"big-jane-birthgiving",id:"304",t:"Big Jane Birthgiving"},{s:"adg",slug:"conquered-hearts--new-version-06",id:"4543",t:"Conquered Hearts"},{s:"adg",slug:"creepy-house",id:"205345",t:"Creepy House"},{s:"adg",slug:"graveyard-executioner",id:"100066",t:"Graveyard Executioner"},{s:"adg",slug:"halinas-blowjob",id:"486",t:"Halina's Blowjob"},{s:"adg",slug:"jail-break-2",id:"222",t:"Jail Break"},{s:"adg",slug:"kingdom-of-deception",id:"201160",t:"Kingdom of Deception"},{s:"adg",slug:"klee-prank-adventure",id:"200910",t:"Klee Prank Adventure"},{s:"adg",slug:"lockdown",id:"200548",t:"Lockdown"},{s:"adg",slug:"lonely-catgirl-is-the-purrfect-pussy",id:"200646",t:"Lonely Catgirl Is the Purrfect Pussy"},{s:"adg",slug:"my-bosss-daughter--new-version-01",id:"4255",t:"My Boss's Daughter - New Version 0.1"},{s:"adg",slug:"new-coral-city--new-version-14--fix-season-2",id:"4785",t:"New Coral City"},{s:"adg",slug:"nympho",id:"201317",t:"Nympho"},{s:"adg",slug:"red-lotus-flower",id:"200501",t:"Red Lotus Flower"},{s:"adg",slug:"roommate-corruption",id:"203746",t:"Roommate Corruption"},{s:"adg",slug:"sexy-magic-2-3",id:"646",t:"Sexy Magic 2"},{s:"adg",slug:"summer-in-the-city",id:"207686",t:"Summer In The City"},{s:"adg",slug:"undercover",id:"207839",t:"Undercover"},{s:"adg",slug:"waifuhub--new-december-update-season-3",id:"4288",t:"WaifuHub - New December Update (Season 3)"},{s:"adg",slug:"what-a-legend",id:"200274",t:"What a Legend"},{s:"adg",slug:"xxlove",id:"201981",t:"XXLove"}];
 var REC_KEY = "yr.games.recent";
 /* v3.9: offline downloads via the APK's native YRGames bridge */
 var DL = { ok: false, port: 0, ids: {} };
@@ -4014,6 +4120,16 @@ function pushRecent(slug){
 }
 function esc(x){ return String(x == null ? "" : x).replace(/[&<>"']/g, function(c){ return "&#" + c.charCodeAt(0) + ";"; }); }
 function bySlug(slug){ for (var i = 0; i < GAMES.length; i++) if (GAMES[i].slug === slug) return GAMES[i]; return null; }
+window.__yr38BySlug = bySlug;
+window.__yr38OpenSlug = function(slug){
+  try {
+    openSlug = slug;
+    pushRecent(slug);
+    renderPanel();
+    var panel = document.getElementById("yr38Panel");
+    if (panel) { panel.classList.add("open"); document.body.classList.add("yr38-open","yr38-armed"); }
+  } catch(e){ console.warn(e); }
+};
 
 var filter = "all", query = "", openSlug = null;
 
@@ -4180,19 +4296,26 @@ document.addEventListener("click", function(e){
 /* FAB shows only when the adult section is unlocked (.adult-shell rendered) */
 function arm(){
   var vu = document.getElementById("vaultUnlockedContent");
-  var armed = !!(vu && !vu.classList.contains("hidden"));
+  var view = document.getElementById("viewVault");
+  var inVault = !!(view && !view.classList.contains("hidden"));
+  var unlocked = !!(vu && !vu.classList.contains("hidden"));
+  var gamesTab = document.getElementById("yrVaultTabGames");
+  var onGames = !!(gamesTab && gamesTab.classList.contains("on"));
+  // Only show FAB while user is inside unlocked vault on the GAMES tab
+  var armed = inVault && unlocked && onGames;
   document.body.classList.toggle("yr38-armed", armed);
   document.body.classList.toggle("yr38-open", armed && !!document.getElementById("yr38Panel") && document.getElementById("yr38Panel").classList.contains("open"));
   if (armed && !document.getElementById("yr38Fab")) {
     var fab = document.createElement("button");
     fab.id = "yr38Fab";
+    fab.setAttribute("aria-label", "Open Games");
     fab.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M6 12h4m-2-2v4m7-1h.01M17 11h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg>Games';
     document.body.appendChild(fab);
   }
   if (!armed) {
     var f = document.getElementById("yr38Fab");
     if (f) f.remove();
-    closePanel();
+    try { closePanel(); } catch(e){}
   }
 }
 var armT = null;
@@ -4242,7 +4365,20 @@ try{
 .yr43-chap:hover{background:rgba(255,255,255,.06)}
 .yr43-note{font:11px/1.6 'Plus Jakarta Sans',sans-serif;color:rgba(255,255,255,.4);margin-top:10px}
 .yr43-empty{padding:30px 10px;text-align:center;color:rgba(255,255,255,.45);font:600 12px 'Plus Jakarta Sans',sans-serif}
-#vaultUnlockedContent.epmode > *:not(#yrVaultTabs):not(#yrVaultEpPane){display:none!important}
+#vaultUnlockedContent.epmode > *:not(#yrVaultTabs):not(#yrVaultEpPane):not(#yrVaultReelsPane){display:none!important}
+#vaultUnlockedContent.reelsmode > *:not(#yrVaultTabs):not(#yrVaultReelsPane){display:none!important}
+#vaultUnlockedContent.gamesmode > *:not(#yrVaultTabs):not(#vaultGalleryGrid){display:none!important}
+#yrVaultReelsPane{display:none}
+#vaultUnlockedContent.reelsmode #yrVaultReelsPane{display:block}
+#vaultUnlockedContent.epmode #yrVaultEpPane{display:block}
+#yrVaultReelsPane .yr-reel-wrap{height:min(78vh,640px);overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;border-radius:16px;border:1px solid rgba(255,255,255,.1)}
+#yrVaultReelsPane .yr-reel{scroll-snap-align:start;position:relative;height:min(78vh,640px);background:#0a0a0f;display:flex;align-items:center;justify-content:center}
+#yrVaultReelsPane .yr-reel iframe,#yrVaultReelsPane .yr-reel video{width:100%;height:100%;border:0;object-fit:contain;background:#000}
+#yrVaultReelsPane .yr-reel-bar{position:absolute;left:0;right:0;bottom:0;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;align-items:center;gap:10px;z-index:5}
+#yrVaultReelsPane .yr-reel-bar button{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:8px 12px;font:700 11px 'JetBrains Mono',monospace;cursor:pointer}
+#yrVaultReelsPane .yr-reel-bar .vol{flex:1;accent-color:var(--yrc-accent,#f5b942)}
+#yrVaultReelsPane .yr-reel-meta{position:absolute;left:14px;bottom:56px;right:14px;color:#fff;font:700 13px 'Plus Jakarta Sans',sans-serif;text-shadow:0 2px 8px #000;pointer-events:none}
+
 .yr43-hide-old{display:none!important}
 </style>
 <script id="yrcine-v44-anime-js">
@@ -4985,17 +5121,40 @@ function wire() {
   d.addEventListener("keydown", function (e) { if (e.key === "Escape" && epModal && epModal.classList.contains("open")) d.getElementById("yrEpClose").click(); });
   d.getElementById("yrVaultTabGames").onclick = function () { epVaultTab("games"); };
   d.getElementById("yrVaultTabEp").onclick = function () { epVaultTab("ep"); };
+  var rt = d.getElementById("yrVaultTabReels");
+  if (rt) rt.onclick = function () { epVaultTab("reels"); };
+  var dj = d.getElementById("yrVaultTabDoujin");
+  if (dj) dj.onclick = function () { epVaultTab("doujin"); };
   epCats();
 }
 function epVaultTab(which) {
-  document.getElementById("yrVaultTabGames").classList.toggle("on", which === "games");
-  document.getElementById("yrVaultTabEp").classList.toggle("on", which === "ep");
-  document.getElementById("vaultUnlockedContent").classList.toggle("epmode", which === "ep");
+  var tabs = { games: "yrVaultTabGames", ep: "yrVaultTabEp", reels: "yrVaultTabReels", doujin: "yrVaultTabDoujin" };
+  Object.keys(tabs).forEach(function(k){
+    var el = document.getElementById(tabs[k]);
+    if (el) el.classList.toggle("on", which === k);
+  });
+  var vu = document.getElementById("vaultUnlockedContent");
+  if (vu) {
+    vu.classList.toggle("epmode", which === "ep");
+    vu.classList.toggle("reelsmode", which === "reels");
+    vu.classList.toggle("gamesmode", which === "games");
+    vu.classList.toggle("doujinmode", which === "doujin");
+  }
   if (which === "ep" && !state.catsOn) {
     state.catsOn = true;
     epRails();
     epSearch(true);
   }
+  if (which === "reels") {
+    try { window.__yrLoadAdultReels && window.__yrLoadAdultReels(true); } catch(e){}
+  }
+  if (which === "games") {
+    try { if (window.YRGamesVault) window.YRGamesVault(); } catch(e){}
+  }
+  if (which === "doujin") {
+    try { window.__yrLoadDoujin && window.__yrLoadDoujin(); } catch(e){}
+  }
+  try { window.dispatchEvent(new Event("hashchange")); } catch(e){}
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);
 else wire();
@@ -5107,22 +5266,61 @@ window.YRGamesVault = function(){
       var grid = document.getElementById("vaultGalleryGrid");
       if (!grid) return;
       grid.dataset.yrGames = "1";
-      grid.innerHTML = "";
-      var card = document.createElement("div");
-      card.style.cssText = "display:flex;align-items:center;gap:16px;padding:20px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)";
-      card.innerHTML = '<div style="width:36px;height:36px;color:var(--yrc-accent,#e11d48)"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 12h4m-2-2v4m7-1h.01M17 11h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg></div><div style="flex:1"><div style="font:800 16px sans-serif;color:#fff">Games Vault</div><div style="font:12px/1.5 sans-serif;color:rgba(255,255,255,.5);margin-top:4px">271 verified games · search · categories · offline downloads</div></div>';
-      var btn = document.createElement("button");
-      btn.textContent = "OPEN GAMES";
-      btn.style.cssText = "border-radius:12px;border:none;background:var(--yrc-accent,#e11d48);color:#000;font:800 12px sans-serif;padding:12px 18px;cursor:pointer";
-      btn.onclick = function(){
-        var fab = document.getElementById("yr38Fab");
-        if (fab) { fab.click(); return; }
-        var p = document.getElementById("yr38Panel");
-        if (p) p.classList.add("open");
-      };
-      card.appendChild(btn);
-      grid.appendChild(card);
-    } catch(e){}
+      grid.style.display = "";
+      var list = window.__YR38_GAMES || [];
+      if (!list.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:rgba(255,255,255,.5);font:700 12px monospace">GAMES CATALOG NOT LOADED — REFRESH</div>';
+        return;
+      }
+      var head = '<div style="grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:4px">' +
+        '<div style="flex:1;min-width:160px"><div style="font:800 10px monospace;letter-spacing:1.6px;color:#fb7185">GAMES VAULT</div>' +
+        '<div style="font:800 16px sans-serif;color:#fff">' + list.length + ' verified titles</div></div>' +
+        '<input id="yrVaultGameQ" type="search" placeholder="Search games…" style="flex:1;min-width:140px;border-radius:99px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;padding:10px 14px;font:600 12px sans-serif;outline:none">' +
+        '<button id="yrVaultGameAll" type="button" style="border:none;border-radius:12px;background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;font:800 11px monospace;padding:10px 14px;cursor:pointer">FULL MENU</button></div>';
+      function paint(q){
+        q = (q || "").toLowerCase().trim();
+        var rows = list.filter(function(g){
+          if (!q) return true;
+          return (g.t || "").toLowerCase().indexOf(q) >= 0 || (g.d || "").toLowerCase().indexOf(q) >= 0 || (g.slug || "").toLowerCase().indexOf(q) >= 0;
+        }).slice(0, 48);
+        var cards = rows.map(function(g){
+          var thumb = g.id ? ('https://adultgames.games/media/' + g.id + '/cover.jpg') : '';
+          return '<button type="button" class="yr-vgame-card" data-slug="' + String(g.slug).replace(/"/g,'&quot;') + '" style="text-align:left;border:1px solid rgba(255,255,255,.1);background:#121218;border-radius:16px;overflow:hidden;cursor:pointer;padding:0;transition:transform .2s,border-color .2s">' +
+            '<div style="aspect-ratio:3/4;background:#1a1a22;position:relative;overflow:hidden">' +
+            (thumb ? '<img loading="lazy" src="' + thumb + '" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">' : '') +
+            '<span style="position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font:800 9px monospace;padding:3px 7px;border-radius:99px">' + (g.n ? 'NEW' : 'PLAY') + '</span></div>' +
+            '<div style="padding:10px 10px 12px"><div style="font:800 12px/1.3 sans-serif;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + String(g.t||'').replace(/</g,'&lt;') + '</div>' +
+            '<div style="margin-top:4px;font:600 10px sans-serif;color:rgba(255,255,255,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + String(g.d||'Tap to play').replace(/</g,'&lt;') + '</div></div></button>';
+        }).join('');
+        if (!cards) cards = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:rgba(255,255,255,.4);font:700 11px monospace">NO MATCH</div>';
+        grid.innerHTML = head + cards;
+        var inp = document.getElementById("yrVaultGameQ");
+        if (inp) {
+          inp.value = q;
+          inp.oninput = function(){ paint(inp.value); };
+        }
+        var all = document.getElementById("yrVaultGameAll");
+        if (all) all.onclick = function(){
+          try {
+            var fab = document.getElementById("yr38Fab");
+            if (fab) fab.click();
+            else if (window.__yr38OpenSlug && list[0]) window.__yr38OpenSlug(list[0].slug);
+          } catch(e){}
+        };
+        grid.querySelectorAll(".yr-vgame-card").forEach(function(b){
+          b.onclick = function(){
+            var slug = b.getAttribute("data-slug");
+            if (window.__yr38OpenSlug) window.__yr38OpenSlug(slug);
+            else {
+              document.body.classList.add("yr38-armed");
+              var fab = document.getElementById("yr38Fab");
+              if (fab) fab.click();
+            }
+          };
+        });
+      }
+      paint("");
+    } catch(e){ console.warn(e); }
   }, 0);
 };
 
@@ -6529,8 +6727,10 @@ body { background-color: transparent !important; }
   var CFG = window.YRCINE_CONFIG || {};
   var BASES = (CFG.musicApi ? [CFG.musicApi] : []).concat([
     "https://saavn.dev/api",
+    "https://jiosaavn-api.vercel.app/api",
     "https://jiosaavn-api-psi.vercel.app/api",
-    "https://jiosavan-api-with-playlist.vercel.app/api"
+    "https://jiosavan-api-with-playlist.vercel.app/api",
+    "https://saavn-api.vercel.app/api"
   ]);
   var RELAY = (CFG.relayBase || "").replace(/\/$/, "");
   var RELAY_K = CFG.relayKey ? ("&k=" + encodeURIComponent(CFG.relayKey)) : "";
@@ -6575,15 +6775,24 @@ body { background-color: transparent !important; }
   }
   function search(q){
     var direct = function(){ return api("/search/songs?query=" + encodeURIComponent(q) + "&limit=20").then(pick); };
+    var alt = function(){
+      // extra public endpoints
+      var urls = [
+        "https://saavn.dev/api/search/songs?query=" + encodeURIComponent(q) + "&limit=20",
+        "https://jiosaavn-api.vercel.app/api/search/songs?query=" + encodeURIComponent(q) + "&limit=20"
+      ];
+      return Promise.any ? Promise.any(urls.map(function(u){
+        return fetch(u, { headers: { accept: "application/json" } }).then(function(r){ if (!r.ok) throw 0; return r.json(); }).then(pick).then(function(list){ if (!list.length) throw 0; return list; });
+      })).catch(function(){ return []; }) : direct();
+    };
     if (RELAY){
-      // backend first (server-side JioSaavn, works on Jio); direct instances as fallback
       return jget(RELAY + "/api/music/search?q=" + encodeURIComponent(q) + "&limit=20" + RELAY_K).then(function(j){
         var r = (j && j.results) || [];
         var list = r.map(function(x){ return { id:String(x.id||''), title:x.title||'', artist:x.artist||'', cover:x.cover||'', audio:x.audio||'', dur:Number(x.dur||0) }; }).filter(function(x){ return x.title && x.audio; });
-        return list.length ? list : direct();
-      }).catch(direct);
+        return list.length ? list : direct().then(function(L){ return L.length ? L : alt(); });
+      }).catch(function(){ return direct().then(function(L){ return L.length ? L : alt(); }); });
     }
-    return direct();
+    return direct().then(function(L){ return L.length ? L : alt(); });
   }
   function fmt(sec){ sec = Math.round(sec || 0); var m = Math.floor(sec/60), s2 = sec%60; return m + ":" + (s2<10?"0":"")+s2; }
   function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -6716,7 +6925,7 @@ body { background-color: transparent !important; }
       search(r.q).then(function(list){
         var rail = app.querySelector('[data-rail="' + i + '"] .yr-m-row');
         if (!rail) return;
-        if (!list.length){ rail.innerHTML = '<div class="yr-m-empty">NO RESULTS — CHECK CONNECTION</div>'; return; }
+        if (!list.length){ rail.innerHTML = '<div class="yr-m-empty">NO RESULTS — TRY ANOTHER SEARCH</div>'; return; }
         rail.innerHTML = list.slice(0, 12).map(card).join("");
         rail.dataset.list = "1";
       });
@@ -6956,9 +7165,9 @@ body { background-color: transparent !important; }
   function img(u){ return u || ''; }
 
   var DIVS = [
-    { id:'JP', label:'MANGA',  country:'JP', chain:['mangapill','manganato','mangataro'] },
-    { id:'KR', label:'MANHWA', country:'KR', chain:['manganato','toonily','asurascans','mangataro'] },
-    { id:'CN', label:'MANHUA', country:'CN', chain:['manganato','comix','mangataro'] }
+    { id:'JP', label:'MANGA',  country:'JP', chain:['mangapill','manganato','mangadex','mangataro','mangafire'] },
+    { id:'KR', label:'MANHWA', country:'KR', chain:['asurascans','vortexscans','toonily','manganato','mangataro','mangadex'] },
+    { id:'CN', label:'MANHUA', country:'CN', chain:['comix','manganato','mangadex','mangataro'] }
   ];
   var div = 'JP';
   function chainFor(){ for (var i=0;i<DIVS.length;i++) if (DIVS[i].id===div) return DIVS[i].chain.slice(); return ['mangapill','manganato']; }
@@ -7007,7 +7216,7 @@ body { background-color: transparent !important; }
     if (!q){ res.innerHTML=''; res.classList.add('hidden'); return; }
     res.classList.remove('hidden');
     res.innerHTML = '<div class="yr-mg-railhead" style="margin-top:6px"><h3>RESULTS</h3></div><div class="yr-mg-grid" id="yrMgSearchGrid"><div class="yr-mg-msg">SEARCHING…</div></div>';
-    var provs = ['mangapill','manganato','asurascans','comix','mangataro'];
+    var provs = ['asurascans','vortexscans','mangapill','manganato','toonily','comix','mangataro','mangadex'];
     var seen = {}, out = [], done = 0;
     provs.forEach(function(p){
       api('/api/scrape/search?query=' + encodeURIComponent(q) + '&provider=' + p).then(function(j){
@@ -7255,6 +7464,626 @@ body[data-navpos="left"] #dynamicIsland, body[data-navpos="right"] #dynamicIslan
   var d = document;
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
   setTimeout(boot, 1500); setTimeout(boot, 3500);
+})();
+</script>
+
+
+<script id="yrcine-v78-adult-reels-and-fixes">
+(function(){
+  "use strict";
+  /* ---- Adult vertical reels with sound bar ---- */
+  var muted = false;
+  var loaded = false;
+  function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  window.__yrLoadAdultReels = function(force){
+    var box = document.getElementById("yrAdultReels");
+    var pane = document.getElementById("yrVaultReelsPane");
+    if (pane) {
+      pane.style.display = "block";
+      pane.style.minHeight = "70vh";
+    }
+    if (!box) return;
+    if (!force && loaded && box.querySelector("iframe")) return;
+    loaded = false;
+    box.innerHTML = '<div style="padding:48px 16px;text-align:center;color:#fff;font:700 12px monospace;letter-spacing:1px">LOADING REELS…</div>';
+
+    var CFG = window.YRCINE_CONFIG || {};
+    var base = (CFG.relayBase || "").replace(/\/$/,"") || "https://voidanime-backend.vercel.app";
+    var proxy = CFG.proxyBase || (base + "/api/proxy?url=");
+    var epApi = "https://www.eporner.com/api/v2/video/search/?query=trending&per_page=30&page=1&thumbsize=big&order=most-popular&gay=0&lq=0";
+    var epApi2 = "https://www.eporner.com/api/v2/video/search/?query=hot&per_page=30&page=1&thumbsize=big&order=top-weekly&gay=0&lq=0";
+
+    // Hardcoded seed so UI never stays blank if network is locked down
+    var SEED = [
+      {id:"8eLNh9e9e5p",title:"Trending #1"},
+      {id:"BKiT4TJTXXQ",title:"Trending #2"},
+      {id:"Gr1EWZrEFBg",title:"Most Played"},
+      {id:"NbpIJjO999B",title:"Trending #4"},
+      {id:"flzHYJheC2h",title:"Bagong Trending"},
+      {id:"aInBq37fpY7",title:"Trending #6"},
+      {id:"VEi21i830dz",title:"Trending #7"},
+      {id:"PDKWORkxmOF",title:"Trending #8"},
+      {id:"xY5jCu277YK",title:"Trending #9"},
+      {id:"WaCHD3lmEVL",title:"Trending #10"},
+      {id:"VTPjkz8eNX0",title:"Trending #11"},
+      {id:"fuB3Rb7s7Wa",title:"Trending #12"}
+    ];
+
+    function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+    function render(items, note){
+      if (!items || !items.length) {
+        box.innerHTML = '<div style="padding:48px 16px;text-align:center;color:rgba(255,255,255,.55);font:700 11px monospace">NO REELS — TAP REELS AGAIN<br><span style="font-weight:600;opacity:.7">'+esc(note||"network blocked")+'</span></div>';
+        return;
+      }
+      box.innerHTML = items.slice(0, 24).map(function(v, i){
+        var title = v.title || ("Reel " + (i+1));
+        var id = v.id || ("r"+i);
+        var embed = v.embed || ("https://www.eporner.com/embed/" + id + "/");
+        if (embed.indexOf("//") === 0) embed = "https:" + embed;
+        return '<div class="yr-reel" data-idx="'+i+'" style="scroll-snap-align:start;position:relative;height:min(78vh,640px);background:#0a0a0f;display:flex;align-items:center;justify-content:center">' +
+          '<iframe src="'+esc(embed)+'" allow="autoplay; fullscreen; encrypted-media" allowfullscreen loading="'+(i<2?"eager":"lazy")+'" referrerpolicy="no-referrer" style="width:100%;height:100%;border:0;background:#000"></iframe>' +
+          '<div class="yr-reel-meta" style="position:absolute;left:14px;bottom:56px;right:14px;color:#fff;font:700 13px sans-serif;text-shadow:0 2px 8px #000;pointer-events:none">'+esc(title)+'</div>' +
+          '<div class="yr-reel-bar" style="position:absolute;left:0;right:0;bottom:0;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;align-items:center;gap:10px;z-index:5">' +
+            '<button type="button" data-mute style="border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:8px 12px;font:700 11px monospace">🔊</button>' +
+            '<span style="flex:1;font:700 10px monospace;color:rgba(255,255,255,.5)">'+(i+1)+' / '+Math.min(items.length,24)+'</span>' +
+            '<button type="button" data-next style="border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:8px 12px;font:700 11px monospace">NEXT ▾</button>' +
+          '</div></div>';
+      }).join("");
+      loaded = true;
+      box.querySelectorAll("[data-mute]").forEach(function(b){
+        b.onclick = function(e){ e.stopPropagation(); muted = !muted; syncMute(); };
+      });
+      box.querySelectorAll("[data-next]").forEach(function(b){
+        b.onclick = function(e){
+          e.stopPropagation();
+          var reel = b.closest(".yr-reel");
+          var next = reel && reel.nextElementSibling;
+          if (next) next.scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+      });
+      syncMute();
+    }
+
+    function parseVideos(j){
+      if (!j) return [];
+      if (typeof j === "string") {
+        try { j = JSON.parse(j); } catch(e){ return []; }
+      }
+      var arr = j.videos || j.results || j.data || [];
+      if (!Array.isArray(arr)) arr = [];
+      return arr.map(function(v){
+        var id = v.id || v.video_id;
+        return {
+          id: id,
+          title: v.title || v.name || id,
+          embed: v.embed || v.embed_url || (id ? ("https://www.eporner.com/embed/" + id + "/") : "")
+        };
+      }).filter(function(v){ return v.id || v.embed; });
+    }
+
+    function jget(url){
+      // 1) native Android bridge
+      var p = (window.nfetch ? window.nfetch(url).then(function(b){
+        if (!b) throw new Error("empty");
+        try { return typeof b === "string" ? JSON.parse(b) : b; } catch(e){ throw e; }
+      }) : Promise.reject());
+      return p.catch(function(){
+        return fetch(url, { headers: { accept: "application/json" }, mode: "cors" }).then(function(r){
+          if (!r.ok) throw new Error("http "+r.status);
+          return r.json();
+        });
+      });
+    }
+
+    var attempts = [
+      function(){ return jget(epApi); },
+      function(){ return jget(epApi2); },
+      function(){ return jget("https://corsproxy.io/?url=" + encodeURIComponent(epApi)); },
+      function(){ return jget("https://api.allorigins.win/raw?url=" + encodeURIComponent(epApi)); },
+      function(){ return jget("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(epApi)); },
+      // relay may 401 — still try
+      function(){ return jget(proxy + encodeURIComponent(epApi)); }
+    ];
+
+    (function next(i){
+      if (i >= attempts.length) {
+        // last resort: seed embeds so the tab is never blank
+        render(SEED.map(function(s){ return { id:s.id, title:s.title, embed:"https://www.eporner.com/embed/"+s.id+"/" }; }), "using offline seed");
+        return;
+      }
+      attempts[i]().then(function(j){
+        var list = parseVideos(j);
+        if (list.length) render(list);
+        else next(i+1);
+      }).catch(function(){ next(i+1); });
+    })(0);
+  };
+  function syncMute(){
+    var btn = document.getElementById("yrReelsMuteBtn");
+    if (btn) btn.textContent = muted ? "🔇 SOUND OFF" : "🔊 SOUND ON";
+    document.querySelectorAll("#yrAdultReels iframe").forEach(function(f){
+      try {
+        // most embeds ignore postMessage; still set attribute for native video if any
+        f.setAttribute("data-muted", muted ? "1" : "0");
+      } catch(e){}
+    });
+    document.querySelectorAll("#yrAdultReels [data-mute]").forEach(function(b){
+      b.textContent = muted ? "🔇" : "🔊";
+    });
+  }
+  document.addEventListener("click", function(e){
+    if (e.target && e.target.id === "yrReelsMuteBtn") {
+      muted = !muted; syncMute();
+    }
+  });
+
+  /* ---- Hide Adult option ---- */
+  function adultHidden(){ try { return localStorage.getItem("yrc.hideAdult") === "1"; } catch(e){ return false; } }
+  function setAdultHidden(v){ try { localStorage.setItem("yrc.hideAdult", v ? "1" : "0"); } catch(e){} applyAdultHide(); }
+  function applyAdultHide(){
+    var hide = adultHidden();
+    document.querySelectorAll('[data-drawer-nav="vault"]').forEach(function(b){
+      b.style.display = hide ? "none" : "";
+    });
+    var view = document.getElementById("viewVault");
+    if (hide && view && !view.classList.contains("hidden")) {
+      // force leave vault if hidden while inside
+      var home = document.querySelector('.nav-pill[data-page="home"]');
+      if (home) home.click();
+    }
+  }
+  function injectHideToggle(){
+    var tools = document.querySelector('#sideDrawer .space-y-1.text-xs') || document.querySelector('.drawer-nav-item') && document.querySelector('.drawer-nav-item').parentElement;
+    if (!tools || document.getElementById("yrHideAdultBtn")) return;
+    var btn = document.createElement("button");
+    btn.id = "yrHideAdultBtn";
+    btn.type = "button";
+    btn.className = "drawer-nav-item flex w-full items-center justify-between rounded-xl border border-transparent px-3 py-2.5 font-semibold text-white/80 hover:text-white";
+    btn.innerHTML = '<span class="flex items-center gap-3"><span class="yrc-icon text-rose-400">🔒</span><span>Hide Adult / Vault</span></span><span id="yrHideAdultLabel" class="rounded bg-white/10 px-2 py-0.5 font-mono text-[9px] font-bold">'+(adultHidden()?"ON":"OFF")+'</span>';
+    btn.onclick = function(){
+      setAdultHidden(!adultHidden());
+      var lbl = document.getElementById("yrHideAdultLabel");
+      if (lbl) lbl.textContent = adultHidden() ? "ON" : "OFF";
+    };
+    // place near vault button if possible
+    var vaultBtn = document.querySelector('[data-drawer-nav="vault"]');
+    if (vaultBtn && vaultBtn.parentNode) vaultBtn.parentNode.insertBefore(btn, vaultBtn.nextSibling);
+    else tools.appendChild(btn);
+    applyAdultHide();
+  }
+
+  /* ---- Sidebar polish: hover animation ---- */
+  var style = document.createElement("style");
+  style.textContent = [
+    ".drawer-nav-item{transition:transform .18s ease,background .18s ease,color .18s ease}",
+    ".drawer-nav-item:hover{transform:translateX(4px);background:rgba(255,255,255,.06)}",
+    ".drawer-nav-item:active{transform:scale(.98)}",
+    "#yr38Fab{transition:opacity .2s,transform .2s;box-shadow:0 10px 30px rgba(0,0,0,.55)!important}",
+    "body:not(.yr38-armed) #yr38Fab{display:none!important;pointer-events:none!important}"
+  ].join("\n");
+  document.head.appendChild(style);
+
+  function boot(){
+    try { injectHideToggle(); applyAdultHide(); } catch(e){}
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  setTimeout(boot, 800);
+  setTimeout(boot, 2000);
+})();
+</script>
+
+
+<style id="yrcine-v79-vault-fix">
+#vaultGalleryGrid .yr-vgame-card:hover{transform:translateY(-3px);border-color:rgba(244,63,94,.55)!important}
+#vaultUnlockedContent.gamesmode #vaultGalleryGrid{display:grid!important}
+#vaultUnlockedContent.gamesmode .mb-6{display:none!important}
+#yrVaultReelsPane{min-height:60vh}
+#yrAdultReels.yr-reel-wrap,#yrAdultReels{height:min(78vh,640px);overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;border-radius:16px;border:1px solid rgba(255,255,255,.1)}
+#yrAdultReels .yr-reel{scroll-snap-align:start;position:relative;height:min(78vh,640px);background:#0a0a0f;display:flex;align-items:center;justify-content:center}
+#yrAdultReels .yr-reel iframe{width:100%;height:100%;border:0;background:#000}
+#yrAdultReels .yr-reel-bar{position:absolute;left:0;right:0;bottom:0;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;align-items:center;gap:10px;z-index:5}
+#yrAdultReels .yr-reel-bar button{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;border-radius:999px;padding:8px 12px;font:700 11px monospace;cursor:pointer}
+#yrAdultReels .yr-reel-bar .vol{flex:1;accent-color:#f5b942}
+#yrAdultReels .yr-reel-meta{position:absolute;left:14px;bottom:56px;right:14px;color:#fff;font:700 13px sans-serif;text-shadow:0 2px 8px #000;pointer-events:none}
+</style>
+
+
+<style id="yrcine-v80-reels-fix">
+#viewVault:not(.hidden) ~ footer,
+body:has(#viewVault:not(.hidden)) footer,
+#viewVault:not(.hidden) + * footer { opacity:.35; pointer-events:none; }
+#vaultUnlockedContent.reelsmode #yrVaultReelsPane{
+  display:block!important;
+  min-height:72vh!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#vaultUnlockedContent.reelsmode > *:not(#yrVaultTabs):not(#yrVaultReelsPane){display:none!important}
+#yrAdultReels{
+  height:min(78vh,720px)!important;
+  overflow-y:auto!important;
+  scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#07070b;
+}
+#yrVaultTabs{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px)}
+</style>
+
+
+<script id="yrcine-v80-reels-boot">
+(function(){
+  function wire(){
+    var rt = document.getElementById("yrVaultTabReels");
+    if (rt && !rt.dataset.v80) {
+      rt.dataset.v80 = "1";
+      rt.addEventListener("click", function(){
+        try {
+          if (typeof epVaultTab === "function") epVaultTab("reels");
+          else if (window.__yrLoadAdultReels) window.__yrLoadAdultReels(true);
+        } catch(e){}
+      });
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);
+  else wire();
+  setTimeout(wire, 1000);
+  setTimeout(wire, 3000);
+})();
+</script>
+
+
+<style id="yrcine-v81-doujin">
+#vaultUnlockedContent.doujinmode > *:not(#yrVaultTabs):not(#yrVaultDoujinPane){display:none!important}
+#vaultUnlockedContent.doujinmode #yrVaultDoujinPane{display:block!important;min-height:70vh}
+#yrDoujinGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+#yrDoujinGrid .yr-dj-card{border:1px solid rgba(255,255,255,.1);background:#121218;border-radius:14px;overflow:hidden;cursor:pointer;text-align:left;padding:0;transition:transform .2s,border-color .2s}
+#yrDoujinGrid .yr-dj-card:hover{transform:translateY(-3px);border-color:rgba(244,63,94,.5)}
+#yrDoujinGrid .yr-dj-card img{width:100%;aspect-ratio:2/3;object-fit:cover;background:#1a1a22;display:block}
+#yrDoujinGrid .yr-dj-card .t{padding:8px 10px 10px;font:700 11px/1.3 sans-serif;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#yrDoujinGrid .yr-dj-card .m{padding:0 10px 10px;font:600 9px monospace;color:rgba(255,255,255,.4)}
+#yrDoujinPages img{max-width:100%;width:min(900px,100%);height:auto;border-radius:4px;background:#111}
+</style>
+
+
+<script id="yrcine-v81-doujin-vpn">
+(function(){
+  "use strict";
+  var IMG = "https://i2.nhentai.net/";
+  var TH = "https://t2.nhentai.net/";
+  var NH = "https://nhentai.net/api/v2";
+  var loadedQ = "";
+
+  function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  function jget(url){
+    var p = (window.nfetch ? window.nfetch(url).then(function(b){
+      if (!b) throw new Error("empty");
+      return typeof b === "string" ? JSON.parse(b) : b;
+    }) : Promise.reject());
+    return p.catch(function(){
+      return fetch(url, { headers: { accept: "application/json" }, mode: "cors" }).then(function(r){
+        if (!r.ok) throw new Error("http "+r.status);
+        return r.json();
+      });
+    }).catch(function(){
+      // public proxies
+      var proxied = [
+        "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+        "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url)
+      ];
+      return (function next(i){
+        if (i >= proxied.length) return Promise.reject(new Error("all failed"));
+        return fetch(proxied[i]).then(function(r){ if(!r.ok) throw 0; return r.json(); }).catch(function(){ return next(i+1); });
+      })(0);
+    });
+  }
+
+  function thumbUrl(item){
+    var path = item.thumbnail;
+    if (path && typeof path === "object") path = path.path;
+    if (!path && item.media_id) path = "galleries/" + item.media_id + "/thumb.jpg";
+    if (!path) return "";
+    if (path.indexOf("http") === 0) return path;
+    return TH + path.replace(/^\//,"");
+  }
+
+  function titleOf(item){
+    if (item.english_title) return item.english_title;
+    if (item.title) {
+      if (typeof item.title === "string") return item.title;
+      return item.title.english || item.title.pretty || item.title.japanese || "Untitled";
+    }
+    return "Untitled";
+  }
+
+  function renderGrid(list){
+    var grid = document.getElementById("yrDoujinGrid");
+    if (!grid) return;
+    if (!list || !list.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.45);font:700 11px monospace">NO RESULTS — try another query or enable VPN</div>';
+      return;
+    }
+    grid.innerHTML = list.map(function(item){
+      var id = item.id;
+      var t = titleOf(item);
+      var pages = item.num_pages || "?";
+      var src = thumbUrl(item);
+      return '<button type="button" class="yr-dj-card" data-id="'+id+'">' +
+        '<img loading="lazy" src="'+esc(src)+'" alt="" onerror="this.style.opacity=.2">' +
+        '<div class="t">'+esc(t)+'</div>' +
+        '<div class="m">#'+id+' · '+pages+'p</div></button>';
+    }).join("");
+    grid.querySelectorAll(".yr-dj-card").forEach(function(b){
+      b.onclick = function(){ openReader(b.getAttribute("data-id")); };
+    });
+  }
+
+  function openReader(id){
+    var reader = document.getElementById("yrDoujinReader");
+    var pagesEl = document.getElementById("yrDoujinPages");
+    var titleEl = document.getElementById("yrDoujinReaderTitle");
+    var infoEl = document.getElementById("yrDoujinPageInfo");
+    if (!reader || !pagesEl) return;
+    reader.style.display = "block";
+    document.body.style.overflow = "hidden";
+    pagesEl.innerHTML = '<div style="padding:40px;color:#fff;font:700 12px monospace">LOADING PAGES…</div>';
+    if (titleEl) titleEl.textContent = "Gallery #" + id;
+    jget(NH + "/galleries/" + id).then(function(g){
+      var t = titleOf(g);
+      if (titleEl) titleEl.textContent = t;
+      var pages = g.pages || [];
+      if (infoEl) infoEl.textContent = pages.length + " pages";
+      if (!pages.length) {
+        pagesEl.innerHTML = '<div style="padding:40px;color:rgba(255,255,255,.5);font:700 11px monospace">No pages — VPN may be required</div>';
+        return;
+      }
+      pagesEl.innerHTML = pages.map(function(pg, i){
+        var path = (pg.path || ("galleries/" + g.media_id + "/" + (pg.number|| (i+1)) + ".jpg")).replace(/^\//,"");
+        var src = IMG + path;
+        return '<img loading="'+(i<3?"eager":"lazy")+'" src="'+esc(src)+'" alt="p'+(i+1)+'" onerror="this.onerror=null;this.src=this.src.replace(\'i2.\',\'i1.\')">';
+      }).join("");
+    }).catch(function(){
+      pagesEl.innerHTML = '<div style="padding:40px;color:rgba(255,255,255,.5);font:700 11px monospace">FAILED TO LOAD — try VPN</div>';
+    });
+  }
+
+  function closeReader(){
+    var reader = document.getElementById("yrDoujinReader");
+    if (reader) reader.style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  function search(q, popular){
+    var grid = document.getElementById("yrDoujinGrid");
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:#fff;font:700 12px monospace">LOADING…</div>';
+    q = (q || "").trim() || "english";
+    loadedQ = q;
+
+    // Try Hifumin GraphQL first (may be down)
+    var hifuminQ = { query: '{ nhentai { search(keyword: "' + q.replace(/"/g,'') + '", page: 1) { result { id title { display english } num_pages media_id } } } }' };
+    var hifuminTry = fetch("https://api.hifumin.app/graphql", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(hifuminQ)
+    }).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
+      var arr = (((j||{}).data||{}).nhentai||{}).search;
+      arr = (arr && arr.result) || arr || [];
+      if (!arr.length) throw 0;
+      return arr.map(function(x){
+        return {
+          id: x.id,
+          media_id: x.media_id,
+          english_title: (x.title && (x.title.english || x.title.display)) || String(x.id),
+          num_pages: x.num_pages,
+          thumbnail: x.media_id ? ("galleries/" + x.media_id + "/thumb.jpg") : null
+        };
+      });
+    });
+
+    var nhUrl = popular
+      ? (NH + "/galleries/popular?page=1")
+      : (NH + "/search?query=" + encodeURIComponent(q) + "&page=1");
+
+    hifuminTry.catch(function(){ return jget(nhUrl); }).then(function(data){
+      var list = Array.isArray(data) ? data : (data.result || data.results || data.data || []);
+      renderGrid(list);
+    }).catch(function(){
+      if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5);font:700 11px monospace">CONNECTION FAILED<br><span style="opacity:.7">Use VPN · nHentai may be blocked on this network</span></div>';
+    });
+  }
+
+  window.__yrLoadDoujin = function(){
+    var qEl = document.getElementById("yrDoujinQ");
+    var go = document.getElementById("yrDoujinGo");
+    var pop = document.getElementById("yrDoujinPopular");
+    var close = document.getElementById("yrDoujinClose");
+    if (go && !go.dataset.wired) {
+      go.dataset.wired = "1";
+      go.onclick = function(){ search(qEl && qEl.value); };
+      if (qEl) qEl.addEventListener("keydown", function(e){ if (e.key === "Enter") search(qEl.value); });
+      if (pop) pop.onclick = function(){ search("english", true); };
+      if (close) close.onclick = closeReader;
+    }
+    if (!loadedQ) search("language:english", true);
+  };
+
+  /* ---- Startup VPN / Adblocker notice ---- */
+  function showVpnNotice(){
+    try {
+      if (sessionStorage.getItem("yrc.vpnNotice") === "1") return;
+    } catch(e){}
+    if (document.getElementById("yrVpnNotice")) return;
+    var bar = document.createElement("div");
+    bar.id = "yrVpnNotice";
+    bar.setAttribute("role", "status");
+    bar.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:99999;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(15,15,20,.96),rgba(30,10,20,.96));border:1px solid rgba(244,63,94,.35);box-shadow:0 16px 40px rgba(0,0,0,.55);color:#fff;font:600 13px/1.45 'Plus Jakarta Sans',sans-serif;backdrop-filter:blur(14px)";
+    bar.innerHTML = '<div style="flex:1"><div style="font:800 11px monospace;letter-spacing:1.4px;color:#fb7185;margin-bottom:4px">TIP FOR BEST PERFORMANCE</div>' +
+      'Use a <b style="color:#fff">VPN</b> and an <b style="color:#fff">ad blocker</b> for faster loads, fewer blocks, and smoother streaming on restricted networks.</div>' +
+      '<button type="button" id="yrVpnNoticeOk" style="flex-shrink:0;border:none;border-radius:10px;background:linear-gradient(135deg,#f43f5e,#fb7185);color:#fff;font:800 11px monospace;padding:10px 14px;cursor:pointer">GOT IT</button>';
+    document.body.appendChild(bar);
+    function dismiss(){
+      try { sessionStorage.setItem("yrc.vpnNotice", "1"); } catch(e){}
+      if (bar.parentNode) bar.parentNode.removeChild(bar);
+    }
+    var ok = document.getElementById("yrVpnNoticeOk");
+    if (ok) ok.onclick = dismiss;
+    setTimeout(dismiss, 14000);
+  }
+
+  function boot(){
+    setTimeout(showVpnNotice, 600);
+    // wire doujin tab if epVaultTab already defined
+    var dj = document.getElementById("yrVaultTabDoujin");
+    if (dj && !dj.dataset.v81) {
+      dj.dataset.v81 = "1";
+      dj.addEventListener("click", function(){
+        try { if (typeof epVaultTab === "function") epVaultTab("doujin"); } catch(e){}
+      });
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+</script>
+
+
+<style id="yrcine-v82-island">
+#dynamicIslandContainer { transition: top .4s ease, bottom .4s ease, transform .4s ease; }
+#dynamicIsland { max-width: 96vw; }
+#dynamicIsland .nav-pill.active {
+  background: linear-gradient(135deg, rgba(244,63,94,.9), rgba(251,113,133,.75)) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(244,63,94,.35);
+}
+#dynamicIsland .nav-pill { border-radius: 999px !important; }
+#islandStateExpanded { gap: 6px !important; }
+@media (max-width: 420px) {
+  #dynamicIsland[data-island-state="expanded"] { border-radius: 22px !important; }
+  #islandStateExpanded .nav-pill span { font-size: 11px; }
+}
+#dynamicIsland.island-press { transform: scale(0.97); }
+</style>
+<script id="yrcine-v82-island-js">
+(function(){
+  function pad(n){ return n < 10 ? "0"+n : ""+n; }
+  function tickClock(){
+    var el = document.getElementById("islandClock");
+    if (!el) return;
+    var d = new Date();
+    el.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function netLabel(){
+    var el = document.getElementById("islandNetLabel");
+    if (!el) return;
+    var on = navigator.onLine !== false;
+    el.textContent = on ? "ONLINE" : "OFFLINE";
+    el.style.color = on ? "rgba(52,211,153,.75)" : "rgba(251,113,133,.85)";
+    var dot = document.querySelector("#islandStateCompact .island-live-dot");
+    if (dot) dot.style.background = on ? "#34d399" : "#fb7185";
+  }
+  function enhanceIsland(){
+    var island = document.getElementById("dynamicIsland");
+    if (!island || island.dataset.v82) return;
+    island.dataset.v82 = "1";
+    // soft press feedback
+    island.addEventListener("pointerdown", function(){ island.classList.add("island-press"); });
+    island.addEventListener("pointerup", function(){ island.classList.remove("island-press"); });
+    island.addEventListener("pointerleave", function(){ island.classList.remove("island-press"); });
+    // long-press compact -> expanded
+    var hold = null;
+    island.addEventListener("pointerdown", function(e){
+      if (island.getAttribute("data-island-state") !== "compact") return;
+      hold = setTimeout(function(){
+        try {
+          if (typeof setDynamicIslandMode === "function") setDynamicIslandMode("expanded");
+          else if (window.setDynamicIslandMode) window.setDynamicIslandMode("expanded");
+        } catch(err){}
+      }, 420);
+    });
+    island.addEventListener("pointerup", function(){ clearTimeout(hold); });
+    island.addEventListener("pointercancel", function(){ clearTimeout(hold); });
+  }
+  function boot(){
+    tickClock(); netLabel(); enhanceIsland();
+    setInterval(tickClock, 15000);
+    window.addEventListener("online", netLabel);
+    window.addEventListener("offline", netLabel);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  // expose for other scripts
+  try { window.__yrIslandTick = tickClock; } catch(e){}
+})();
+</script>
+
+<style id="yrcine-v80-ui-css">
+/* v8.0: games FAB only inside the vault + pinned */
+body.yr38-armed:not(.yr38-open) #yr38Fab{ display:none !important; }
+body.yr38-armed.yr-in-vault:not(.yr38-open) #yr38Fab{ display:flex !important; }
+#yr38Fab{
+  position:fixed !important; right:14px !important; left:auto !important;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  top:auto !important; transform:none !important;
+}
+/* drawer nav: emoji accent + staggered entrance */
+#slidebarDrawer .drawer-nav-item{ position:relative; opacity:0; transform:translateX(-16px);
+  transition:opacity .42s ease, transform .42s cubic-bezier(.2,.8,.3,1), background .18s, color .18s; }
+#slidebarDrawer.translate-x-0 .drawer-nav-item{ opacity:1; transform:none; }
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(1){transition-delay:.04s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(2){transition-delay:.08s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(3){transition-delay:.12s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(4){transition-delay:.16s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(5){transition-delay:.20s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(6){transition-delay:.24s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(7){transition-delay:.28s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(8){transition-delay:.32s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(9){transition-delay:.36s}
+#slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(10){transition-delay:.40s}
+.yr-nav-emoji{ font-size:15px; line-height:1; width:18px; text-align:center; flex-shrink:0; }
+/* island polish: gradient hairline + deeper glow + smoother morph */
+#dynamicIsland{
+  background:linear-gradient(135deg, rgba(20,22,30,.96), rgba(10,11,16,.96)) !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  box-shadow:0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+#dynamicIsland::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:linear-gradient(120deg, rgba(var(--yrc-accent-rgb,245,185,66),.16), transparent 45%); }
+</style>
+<script id="yrcine-v80-ui-js">
+(function(){
+  var EMOJI = { home:'\ud83c\udfe0', movies:'\ud83c\udfac', series:'\ud83d\udcfa', anime:'\u26e9\ufe0f',
+    manga:'\ud83d\udcd6', music:'\ud83c\udfb5', ai:'\ud83e\udd16', videos:'\ud83c\udfa5',
+    watchlist:'\ud83d\udd16', vault:'\ud83d\udd12', clips:'\ud83c\udfac' };
+
+  function syncVaultFlag(){
+    try {
+      var v = document.getElementById('viewVault');
+      var inVault = !!(v && !v.classList.contains('hidden') && v.offsetParent !== null);
+      document.body.classList.toggle('yr-in-vault', inVault);
+    } catch(e){}
+  }
+  function emojiDrawer(){
+    try {
+      document.querySelectorAll('#slidebarDrawer .drawer-nav-item').forEach(function(item){
+        if (item.querySelector('.yr-nav-emoji')) return;
+        var key = item.getAttribute('data-drawer-nav') || '';
+        var em = EMOJI[key];
+        if (!em) return;
+        var sp = document.createElement('span');
+        sp.className = 'yr-nav-emoji';
+        sp.textContent = em;
+        item.insertBefore(sp, item.firstChild);
+      });
+    } catch(e){}
+  }
+  function boot(){ syncVaultFlag(); emojiDrawer(); }
+  var d = document;
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
+  setInterval(function(){ syncVaultFlag(); emojiDrawer(); }, 900);
 })();
 </script>
 

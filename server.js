@@ -238,15 +238,24 @@ app.get('/api/scrape/pages', async (req,res)=>{
 });
 
 
-// ---------- MUSIC: JioSaavn (server-side, plain URLs, multi-instance) ----------
-// We do NOT decrypt locally: DES-ECB is disabled in Node 20 (OpenSSL 3), so we
-// proxy JioSaavn API instances that already return plain download URLs, and
-// fall back across several so one being down does not kill music.
-const MUSIC_APIS = [
-  'https://saavn.dev/api',
-  'https://jiosaavn-api-psi.vercel.app/api',
-  'https://jiosavan-api-with-playlist.vercel.app/api'
-];
+// ---------- MUSIC: JioSaavn ----------
+// Primary: call JioSaavn directly and decrypt the media URL with crypto-js (pure
+// JS DES-ECB) - Node 20's OpenSSL has DES disabled, so we cannot use crypto.
+// Fallback: proxy public JioSaavn API instances if the direct call fails.
+const CryptoJS = require('crypto-js');
+function saavnDecrypt(enc){
+  try {
+    const key = CryptoJS.enc.Utf8.parse('38346591');
+    const dec = CryptoJS.DES.decrypt(
+      { ciphertext: CryptoJS.enc.Base64.parse(String(enc)) },
+      key,
+      { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 }
+    );
+    let url = dec.toString(CryptoJS.enc.Utf8);
+    if (!url || url.indexOf('http') !== 0) return null;
+    return url.replace(/_96\.mp4/, '_320.mp4');
+  } catch(e){ return null; }
+}
 function saavnClean(t){
   return String(t == null ? '' : t)
     .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'")
@@ -254,37 +263,39 @@ function saavnClean(t){
 }
 function saavnEntity(s){
   if(!s) return null;
-  let img = '';
-  if (Array.isArray(s.image) && s.image.length) img = (s.image[s.image.length-1] || {}).url || '';
-  else img = s.image || s.cover || '';
-  let audio = '';
-  if (Array.isArray(s.downloadUrl) && s.downloadUrl.length) audio = (s.downloadUrl[s.downloadUrl.length-1] || {}).url || '';
-  else if (Array.isArray(s.downloadUrls) && s.downloadUrls.length) audio = (s.downloadUrls[s.downloadUrls.length-1] || {}).url || '';
-  else audio = s.media_url || s.url || '';
-  let art = '';
-  if (s.artists && s.artists.primary) art = s.artists.primary.map(function(a){ return a.name; }).join(', ');
-  else if (s.artists && s.artists.all) art = s.artists.all.map(function(a){ return a.name; }).join(', ');
-  else art = s.primary_artists || s.singers || s.subtitle || s.artist || '';
+  let img = s.image || s.cover || '';
+  if (typeof img === 'string') img = img.replace(/150x150|50x50/, '500x500');
+  const enc = s.encrypted_media_url || s.encryptedMediaUrl || '';
+  let audio = enc ? saavnDecrypt(enc) : (s.media_url || s.url || '');
   return {
     id: String(s.id || s.songid || ''),
-    title: saavnClean(s.name || s.song || s.title),
-    artist: saavnClean(art),
+    title: saavnClean(s.song || s.title || s.name),
+    artist: saavnClean(s.primary_artists || s.singers || s.subtitle || s.artist || ''),
     cover: img,
     audio: audio || '',
     dur: Number(s.duration || 0),
-    album: saavnClean((s.album && s.album.name) || s.album || ''),
+    album: saavnClean(s.album || ''),
     language: s.language || ''
   };
 }
-async function musicFetch(path){
-  for (var i=0;i<MUSIC_APIS.length;i++){
-    try {
-      const r = await axios.get(MUSIC_APIS[i] + path, {
-        timeout: 12000,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari/537.36', 'Accept': 'application/json' }
-      });
-      if (r.data) return r.data;
-    } catch(e){ /* next instance */ }
+const MUSIC_APIS = [
+  'https://saavn.dev/api',
+  'https://jiosaavn-api-psi.vercel.app/api',
+  'https://jiosavan-api-with-playlist.vercel.app/api'
+];
+async function saavnDirect(path){
+  const r = await axios.get('https://www.jiosaavn.com/api.php' + path, {
+    timeout: 12000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json', 'Accept-Language': 'en-IN,en;q=0.9'
+    }
+  });
+  return r.data;
+}
+async function musicProxy(path){
+  for (let i=0;i<MUSIC_APIS.length;i++){
+    try { const r = await axios.get(MUSIC_APIS[i] + path, { timeout: 12000, headers: { 'User-Agent':'Mozilla/5.0', 'Accept':'application/json' } }); if (r.data) return r.data; } catch(e){}
   }
   return null;
 }
@@ -295,10 +306,21 @@ app.get('/api/music/search', async (req,res)=>{
   const cacheKey = 'music:search:' + q.toLowerCase() + ':' + limit;
   const cached = cache.get(cacheKey);
   if(cached) return res.json(cached);
-  const j = await musicFetch('/search/songs?query=' + encodeURIComponent(q) + '&limit=' + limit);
-  const arr = (j && ((j.data && (j.data.results || j.data.songs)) || j.results || j.songs)) || [];
-  const results = (Array.isArray(arr) ? arr : []).map(saavnEntity).filter(x => x && x.title && x.audio);
-  const payload = { results, data: results, source: 'jiosaavn', count: results.length };
+  let results = [];
+  // 1) direct JioSaavn
+  try {
+    const d = await saavnDirect('/?__call=search.getResults&q=' + encodeURIComponent(q)
+      + '&_format=json&_marker=0&api_version=4&ctx=web6dot0&n=' + limit + '&p=1');
+    const list = (d && (d.results || d.songs)) || [];
+    results = (Array.isArray(list) ? list : []).map(saavnEntity).filter(x => x && x.title && x.audio);
+  } catch(e){ /* fall through */ }
+  // 2) proxy instances
+  if (!results.length){
+    const j = await musicProxy('/search/songs?query=' + encodeURIComponent(q) + '&limit=' + limit);
+    const arr = (j && ((j.data && (j.data.results || j.data.songs)) || j.results || j.songs)) || [];
+    results = (Array.isArray(arr) ? arr : []).map(saavnEntity).filter(x => x && x.title && x.audio);
+  }
+  const payload = { results, data: results, source: results.length ? 'jiosaavn' : 'none', count: results.length };
   if(results.length) cache.set(cacheKey, payload, 300);
   res.json(payload);
 });
@@ -308,9 +330,17 @@ app.get('/api/music/song', async (req,res)=>{
   const cacheKey = 'music:song:' + id;
   const cached = cache.get(cacheKey);
   if(cached) return res.json(cached);
-  const j = await musicFetch('/songs/' + encodeURIComponent(id));
-  const one = (j && ((j.data && (Array.isArray(j.data) ? j.data[0] : j.data)) || (Array.isArray(j) ? j[0] : j))) || null;
-  const norm = saavnEntity(one);
+  let norm = null;
+  try {
+    const d = await saavnDirect('/?__call=song.getDetails&pids=' + encodeURIComponent(id) + '&_format=json&_marker=0&api_version=4&ctx=web6dot0');
+    const one = (d && (d[id] || (d.songs && d.songs[0]))) || null;
+    norm = saavnEntity(one);
+  } catch(e){}
+  if (!norm || !norm.audio){
+    const j = await musicProxy('/songs/' + encodeURIComponent(id));
+    const one = (j && ((j.data && (Array.isArray(j.data) ? j.data[0] : j.data)) || (Array.isArray(j) ? j[0] : j))) || null;
+    norm = saavnEntity(one);
+  }
   const payload = { song: norm, data: norm, results: norm ? [norm] : [] };
   if(norm) cache.set(cacheKey, payload, 600);
   res.json(payload);
