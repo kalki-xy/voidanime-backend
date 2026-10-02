@@ -7101,6 +7101,159 @@ body.yr-drawer-open #dynamicIslandContainer{
 })();
 </script>
 
+
+<!-- ===== v8.4: dynamic island upgrade (live activity, real battery/net, premium motion) ===== -->
+<style id="yrcine-v84-island-css">
+/* --- premium surface + motion --- */
+#dynamicIslandContainer{ transition: opacity .26s ease, visibility .26s, transform .46s cubic-bezier(.32,.72,0,1) !important; }
+#dynamicIsland{ will-change: width, height; }
+#dynamicIsland[data-island-state="expanded"]{ border-radius:24px !important; }
+
+/* travelling sheen across the glass */
+#dynamicIsland .yr-island-sheen{
+  position:absolute; top:-20%; bottom:-20%; width:34%; pointer-events:none; z-index:3;
+  background:linear-gradient(100deg, transparent 0%, rgba(255,255,255,.13) 45%, rgba(255,255,255,.02) 62%, transparent 100%);
+  transform:translateX(-140%); animation:yrIslandSheen 6s ease-in-out infinite;
+}
+@keyframes yrIslandSheen{ 0%,68%{ transform:translateX(-140%);} 86%,100%{ transform:translateX(360%);} }
+
+/* live activity: real in-flight network requests */
+#dynamicIsland .yr-island-live{
+  position:absolute; left:0; right:0; bottom:0; height:2px; opacity:0; z-index:4; pointer-events:none;
+  transition:opacity .25s ease;
+  background-image:linear-gradient(90deg, transparent 0%, rgba(var(--yrc-accent-rgb,244,63,94),.95) 50%, transparent 100%);
+  background-size:45% 100%; background-repeat:no-repeat;
+}
+@keyframes yrIslandSweep{ 0%{ background-position:-50% 0; } 100%{ background-position:150% 0; } }
+/* only animate while there is real activity (saves CPU on low-end phones) */
+#dynamicIsland.yr-busy .yr-island-live{ opacity:1; animation:yrIslandSweep 1.1s linear infinite; }
+#dynamicIsland.yr-busy{
+  box-shadow:0 14px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--yrc-accent-rgb,244,63,94),.34),
+             0 0 26px rgba(var(--yrc-accent-rgb,244,63,94),.22), inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+/* battery chip */
+#yrIslandBattery{ display:none; align-items:center; gap:3px; flex-shrink:0; }
+#dynamicIsland[data-island-state="compact"] #yrIslandBattery.yr-has{ display:inline-flex; }
+#yrIslandBattery .yr-bat{ position:relative; width:17px; height:9px; border:1px solid rgba(255,255,255,.34); border-radius:2.5px; padding:1px; }
+#yrIslandBattery .yr-bat::after{ content:""; position:absolute; right:-3.5px; top:2.5px; width:2px; height:3px; border-radius:0 1px 1px 0; background:rgba(255,255,255,.34); }
+#yrIslandBattery .yr-bat i{ display:block; height:100%; border-radius:1px; background:#34d399; transition:width .4s ease, background .3s ease; }
+#yrIslandBattery.yr-low .yr-bat i{ background:#fb7185; }
+#yrIslandBattery.yr-charge .yr-bat i{ background:#fbbf24; }
+</style>
+<script id="yrcine-v84-island-js">
+(function(){
+  var busy = 0;
+  function islandEl(){ return document.getElementById("dynamicIsland"); }
+
+  /* ---------- real live activity: count in-flight fetch + XHR ---------- */
+  function renderBusy(){
+    var isl = islandEl(); if (!isl) return;
+    isl.classList.toggle("yr-busy", busy > 0);
+  }
+  function bump(d){ busy = Math.max(0, busy + d); renderBusy(); }
+  try {
+    var _fetch = window.fetch;
+    if (typeof _fetch === "function") {
+      window.fetch = function(){
+        var p;
+        try { p = _fetch.apply(this, arguments); } catch(e){ throw e; }
+        bump(1);
+        return p.then(function(r){ bump(-1); return r; }, function(e){ bump(-1); throw e; });
+      };
+    }
+    var _open = XMLHttpRequest.prototype.open, _send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(){ this.__yrCounted = false; return _open.apply(this, arguments); };
+    XMLHttpRequest.prototype.send = function(){
+      var self = this;
+      if (!self.__yrCounted) {
+        self.__yrCounted = true; bump(1);
+        self.addEventListener("loadend", function(){ if (self.__yrCounted){ self.__yrCounted = false; bump(-1); } });
+      }
+      return _send.apply(this, arguments);
+    };
+  } catch(e){}
+
+  /* ---------- inject sheen + live bar + battery chip ---------- */
+  function inject(){
+    var isl = islandEl(); if (!isl || isl.dataset.v84) return;
+    isl.dataset.v84 = "1";
+    var sheen = document.createElement("span"); sheen.className = "yr-island-sheen"; isl.appendChild(sheen);
+    var live  = document.createElement("span"); live.className  = "yr-island-live";  isl.appendChild(live);
+
+    var clock = document.getElementById("islandClock");
+    if (clock && clock.parentElement && !document.getElementById("yrIslandBattery")) {
+      var b = document.createElement("span");
+      b.id = "yrIslandBattery";
+      b.title = "Battery";
+      b.innerHTML = '<span class="yr-bat"><i style="width:0%"></i></span>';
+      clock.parentElement.insertBefore(b, clock);
+    }
+  }
+
+  /* ---------- real battery ---------- */
+  function initBattery(){
+    if (!navigator.getBattery) return;
+    navigator.getBattery().then(function(bat){
+      var host = document.getElementById("yrIslandBattery");
+      function paint(){
+        host = document.getElementById("yrIslandBattery");
+        if (!host) return;
+        var pct = Math.round(bat.level * 100);
+        host.classList.add("yr-has");
+        host.classList.toggle("yr-low", pct <= 15 && !bat.charging);
+        host.classList.toggle("yr-charge", !!bat.charging);
+        var fill = host.querySelector(".yr-bat i");
+        if (fill) fill.style.width = Math.max(6, pct) + "%";
+        host.title = "Battery " + pct + "%" + (bat.charging ? " (charging)" : "");
+      }
+      paint();
+      bat.addEventListener("levelchange", paint);
+      bat.addEventListener("chargingchange", paint);
+      window.__yrPaintBattery = paint;
+    }).catch(function(){});
+  }
+
+  /* ---------- richer compact line: ONLINE/OFFLINE + network type + battery ---------- */
+  function paintMeta(){
+    var el = document.getElementById("islandNetLabel"); if (!el) return;
+    var on = navigator.onLine !== false;
+    var parts = [];
+    if (!on) {
+      parts.push("OFFLINE");
+    } else {
+      var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      var t = c && (c.effectiveType || c.type);
+      parts.push(t ? String(t).toUpperCase() : "ONLINE");
+    }
+    var bat = document.getElementById("yrIslandBattery");
+    var pct = bat && bat.getAttribute("title");
+    if (pct) { var m = pct.match(/(\d+)%/); if (m) parts.push(m[1] + "%"); }
+    el.textContent = parts.join(" \u00B7 ");
+    el.style.color = on ? "rgba(52,211,153,.75)" : "rgba(251,113,133,.85)";
+    var dot = document.querySelector("#islandStateCompact .island-live-dot");
+    if (dot) dot.style.background = on ? "#34d399" : "#fb7185";
+  }
+
+  function boot(){
+    inject();
+    initBattery();
+    paintMeta();
+    renderBusy();
+    setInterval(function(){ inject(); paintMeta(); }, 8000);
+    window.addEventListener("online", function(){ paintMeta(); });
+    window.addEventListener("offline", function(){ paintMeta(); });
+    // keep the sheen/bar alive across state re-renders
+    if (window.MutationObserver) {
+      var isl = islandEl();
+      if (isl) new MutationObserver(function(){ inject(); renderBusy(); }).observe(isl, { attributes:true, attributeFilter:["data-island-state","class"] });
+    }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+  try { window.__yrIslandBusy = bump; } catch(e){}
+})();
+</script>
+
 </body>
 <script id="yrcine-v74-nosandbox">
 (function(){
