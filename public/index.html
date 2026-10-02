@@ -8043,7 +8043,12 @@ body.yr38-armed.yr-in-vault:not(.yr38-open) #yr38Fab{ display:flex !important; }
 #slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(8){transition-delay:.32s}
 #slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(9){transition-delay:.36s}
 #slidebarDrawer.translate-x-0 .drawer-nav-item:nth-child(10){transition-delay:.40s}
-.yr-nav-emoji{ font-size:15px; line-height:1; width:18px; text-align:center; flex-shrink:0; }
+/* v8.1: custom minimal transparent drawer icons (no emoji) */
+#slidebarDrawer .drawer-nav-item .yrc-icon{ opacity:.55; transition:opacity .24s ease, transform .24s ease; }
+#slidebarDrawer .drawer-nav-item .yrc-icon svg{ stroke-width:1.6 !important; }
+#slidebarDrawer .drawer-nav-item:hover .yrc-icon,
+#slidebarDrawer .drawer-nav-item.active .yrc-icon{ opacity:1; transform:scale(1.06); }
+#slidebarDrawer .drawer-nav-item .yrc-icon svg *{ stroke-linecap:round; stroke-linejoin:round; }
 /* island polish: gradient hairline + deeper glow + smoother morph */
 #dynamicIsland{
   background:linear-gradient(135deg, rgba(20,22,30,.96), rgba(10,11,16,.96)) !important;
@@ -8055,10 +8060,6 @@ body.yr38-armed.yr-in-vault:not(.yr38-open) #yr38Fab{ display:flex !important; }
 </style>
 <script id="yrcine-v80-ui-js">
 (function(){
-  var EMOJI = { home:'\ud83c\udfe0', movies:'\ud83c\udfac', series:'\ud83d\udcfa', anime:'\u26e9\ufe0f',
-    manga:'\ud83d\udcd6', music:'\ud83c\udfb5', ai:'\ud83e\udd16', videos:'\ud83c\udfa5',
-    watchlist:'\ud83d\udd16', vault:'\ud83d\udd12', clips:'\ud83c\udfac' };
-
   function syncVaultFlag(){
     try {
       var v = document.getElementById('viewVault');
@@ -8066,24 +8067,13 @@ body.yr38-armed.yr-in-vault:not(.yr38-open) #yr38Fab{ display:flex !important; }
       document.body.classList.toggle('yr-in-vault', inVault);
     } catch(e){}
   }
-  function emojiDrawer(){
-    try {
-      document.querySelectorAll('#slidebarDrawer .drawer-nav-item').forEach(function(item){
-        if (item.querySelector('.yr-nav-emoji')) return;
-        var key = item.getAttribute('data-drawer-nav') || '';
-        var em = EMOJI[key];
-        if (!em) return;
-        var sp = document.createElement('span');
-        sp.className = 'yr-nav-emoji';
-        sp.textContent = em;
-        item.insertBefore(sp, item.firstChild);
-      });
-    } catch(e){}
+  function stripEmoji(){
+    try { document.querySelectorAll('#slidebarDrawer .yr-nav-emoji').forEach(function(e){ e.remove(); }); } catch(e){}
   }
-  function boot(){ syncVaultFlag(); emojiDrawer(); }
+  function boot(){ syncVaultFlag(); stripEmoji(); }
   var d = document;
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
-  setInterval(function(){ syncVaultFlag(); emojiDrawer(); }, 900);
+  setInterval(function(){ syncVaultFlag(); }, 900);
 })();
 </script>
 
