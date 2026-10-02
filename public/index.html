@@ -8057,6 +8057,16 @@ body.yr38-armed.yr-in-vault:not(.yr38-open) #yr38Fab{ display:flex !important; }
 }
 #dynamicIsland::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
   background:linear-gradient(120deg, rgba(var(--yrc-accent-rgb,245,185,66),.16), transparent 45%); }
+
+/* v8.2 FIX: several scripts pin #dynamicIsland's inline height (50px/40px/52px) while the
+   expanded nav needs 52px of content (pill min-height 40 + 12px padding) inside a 1px-border,
+   overflow:hidden box. The 2px deficit clipped the active tab's text at the top.
+   Let the expanded island size to its content so it can never clip, on any device/font. */
+#dynamicIsland[data-island-state="expanded"]{ height:auto !important; min-height:54px !important; }
+#islandStateExpanded{ min-height:52px; align-items:center; }
+#islandStateExpanded nav{ align-items:center; }
+#dynamicIsland .nav-pill{ display:flex; align-items:center; justify-content:center; }
+#dynamicIsland .nav-pill > span{ line-height:1.15; display:block; }
 </style>
 <script id="yrcine-v80-ui-js">
 (function(){
