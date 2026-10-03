@@ -280,9 +280,17 @@ function saavnEntity(s){
 }
 const MUSIC_APIS = [
   'https://saavn.dev/api',
+  'https://saavn.sumit.co/api',
+  'https://jiosaavn.rajputhemant.dev/api',
   'https://jiosaavn-api-psi.vercel.app/api',
-  'https://jiosavan-api-with-playlist.vercel.app/api'
+  'https://jiosavan-api-with-playlist.vercel.app/api',
+  'https://jiosaavn-api.vercel.app/api',
+  'https://saavn-api.vercel.app/api'
 ];
+function musicRows(d){
+  const arr = (d && ((d.data && (d.data.results || d.data.songs)) || d.results || d.songs)) || [];
+  return Array.isArray(arr) ? arr : [];
+}
 async function saavnDirect(path){
   const r = await axios.get('https://www.jiosaavn.com/api.php' + path, {
     timeout: 12000,
@@ -295,7 +303,10 @@ async function saavnDirect(path){
 }
 async function musicProxy(path){
   for (let i=0;i<MUSIC_APIS.length;i++){
-    try { const r = await axios.get(MUSIC_APIS[i] + path, { timeout: 12000, headers: { 'User-Agent':'Mozilla/5.0', 'Accept':'application/json' } }); if (r.data) return r.data; } catch(e){}
+    try {
+      const r = await axios.get(MUSIC_APIS[i] + path, { timeout: 12000, headers: { 'User-Agent':'Mozilla/5.0', 'Accept':'application/json' }, validateStatus: () => true });
+      if (r && r.data && musicRows(r.data).length) return r.data;
+    } catch(e){}
   }
   return null;
 }
@@ -323,6 +334,21 @@ app.get('/api/music/search', async (req,res)=>{
   const payload = { results, data: results, source: results.length ? 'jiosaavn' : 'none', count: results.length };
   if(results.length) cache.set(cacheKey, payload, 300);
   res.json(payload);
+});
+app.get('/api/music/debug', async (req,res)=>{
+  const q = req.query.q || 'arijit singh';
+  const out = { q, direct: null, instances: [] };
+  try {
+    const d = await saavnDirect('/?__call=search.getResults&q=' + encodeURIComponent(q) + '&_format=json&_marker=0&api_version=4&ctx=web6dot0&n=3&p=1');
+    out.direct = { ok: musicRows(d).length > 0, count: musicRows(d).length };
+  } catch(e){ out.direct = { ok:false, error: String(e).slice(0,120) }; }
+  for (const base of MUSIC_APIS){
+    try {
+      const r = await axios.get(base + '/search/songs?query=' + encodeURIComponent(q) + '&limit=3', { timeout: 10000, headers:{'User-Agent':'Mozilla/5.0','Accept':'application/json'}, validateStatus: () => true });
+      out.instances.push({ base, status: r.status, count: musicRows(r.data).length });
+    } catch(e){ out.instances.push({ base, error: String(e).slice(0,100) }); }
+  }
+  res.json(out);
 });
 app.get('/api/music/song', async (req,res)=>{
   const id = req.query.id;
