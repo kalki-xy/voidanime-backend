@@ -39,19 +39,26 @@ const ALLOW_HOSTS = [
   'www.omdbapi.com', 'omdbapi.com',
   'mangapill.com', 'api.mangadex.org', 'uploads.mangadex.org',
   'mangadex.org', 'mangabuddy.com', 'mangafire.to', 'mangakakalot.com',
+  'weebcentral.com', 'toonily.com', 'manganato.com', 'mangataro.org',
   'voidverse.me', 'player.voidverse.me', 'anilink.cc',
   'vidzee.wtf', 'vidfast.pro', 'vidspark.to', 'primesrc.me', 'peachify.top',
-  'vidnest.fun', 'vidcore.org', '2embed.skin', '2embed.to', 'vidsrc.pm',
+  'vidnest.fun', 'vidcore.org', '2embed.skin', '2embed.to', '2embed.cc', 'vidsrc.pm',
   'vaplayer.ru', 'vidup.to', '123embed.net', 'mapple.fun', 'anyembed.xyz',
   'vidsrc.su', 'vidsrc.to', 'multiembed.mov', '111movies.com', 'vidlink.pro',
-  'videasy.net', 'vidora.su', 'vidsrc.cc', 'frembed.cc', 'vidsrc.me',
-  'embed.su', 'vidsrc.net', 'vidsrc.xyz', 'moviesapi.club', 'vidbinge.dev',
+  'videasy.net', 'vidora.su', 'vidsrc.cc', 'frembed.cc', 'frembed.icu', 'vidsrc.me',
+  'embed.su', 'vidsrc.net', 'vidsrc.xyz', 'vidsrc.wtf', 'moviesapi.club', 'moviesapi.to', 'vidbinge.dev',
+  'autoembed.cc', 'autoembed.co', 'smashystream.com', 'player.smashystream.com',
   'nontongo.win', '2anime.xyz', 'aniwatch.to', 'aniwatchtv.to',
   'eporner.com', 'www.eporner.com', 'static-ca-cdn.eporner.com', 'gvideo.eporner.com',
+  'adultgames.games', 'content-cdn.adultgames.games', 'xxxgames.games',
+  'nhentai.net', 'i.nhentai.net', 'i2.nhentai.net', 'i3.nhentai.net', 't.nhentai.net', 't2.nhentai.net',
+  'discord.com', 'discordapp.com', 'discordapp.net', 'cdn.discordapp.com',
   'jiosaavn.com', 'www.jiosaavn.com', 'saavncdn.com', 'aac.saavncdn.com',
   'c.saavncdn.com', 'jiosaavn-api-*.vercel.app', 'saavn.dev',
   'jiosavan-api-with-playlist.vercel.app', 'lrclib.net',
+  'pollinations.ai', 'image.pollinations.ai',
   'wsrv.nl', 'i.scdn.co', 'lh3.googleusercontent.com', 'media.kitsu.io',
+  'cdn.jsdelivr.net', 'fonts.gstatic.com', 'fonts.googleapis.com',
 ];
 const EXTRA = (process.env.RELAY_EXTRA_HOSTS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 ALLOW_HOSTS.push(...EXTRA);
@@ -120,6 +127,15 @@ function rewriteHtml(html, baseUrl, selfBase) {
   return html;
 }
 
+function embedErrorPage(title, detail) {
+  return '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<body style="margin:0;background:#0b0b10;color:#fff;font:600 14px/1.5 system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center">' +
+    '<div style="max-width:320px;padding:20px">' +
+    '<div style="font:800 11px monospace;letter-spacing:2px;color:#fb7185;margin-bottom:8px">YRcine relay</div>' +
+    '<div style="font:800 15px system-ui;margin-bottom:6px">' + title + '</div>' +
+    '<div style="color:rgba(255,255,255,.55);font-size:12px">' + detail + '</div></div></body>';
+}
+
 const router = express.Router();
 
 router.use((req, res, next) => {
@@ -175,20 +191,27 @@ router.get('/proxy', async (req, res) => {
 
 router.get('/embed', async (req, res) => {
   const url = req.query.url;
-  if (!url) return res.status(400).json({ ok: false, error: 'url required' });
+  const sendErr = (code, title, detail) => {
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.setHeader('content-security-policy', 'frame-ancestors *');
+    res.status(code).send(embedErrorPage(title, detail));
+  };
+  if (!url) return sendErr(400, 'No source URL', 'The player was opened without a source.');
   const host = hostOf(url);
-  if (!isAllowed(host)) return res.status(403).json({ ok: false, error: 'host not allowed', host });
+  if (!isAllowed(host)) return sendErr(403, 'Source not allowed', 'This host is not in the relay allowlist. Add it to ALLOW_HOSTS.');
   try {
     const up = await fetch(url, { headers: {
       'user-agent': 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari/537.36',
       accept: 'text/html,application/xhtml+xml,*/*;q=0.8', 'accept-language': 'en-IN,en;q=0.9',
-    }, signal: AbortSignal.timeout(TIMEOUT) });
+    }, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT) });
+    if (!up.ok) return sendErr(502, 'Source returned ' + up.status, 'The provider refused the relay request. Try the Direct route or another source.');
     const html = await up.text();
+    if (!/<!doctype|<html|<head|<body/i.test(html)) return sendErr(502, 'Unexpected response', 'The provider did not return a playable page.');
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.setHeader('content-security-policy', 'frame-ancestors *');
     res.send(rewriteHtml(html, url, selfBaseOf(req)));
   } catch (e) {
-    res.status(502).json({ ok: false, error: 'upstream failed', detail: String(e).slice(0, 160) });
+    sendErr(502, 'Source did not respond', 'The provider timed out through the relay. Try the Direct route or another source.');
   }
 });
 
