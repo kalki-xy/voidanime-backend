@@ -149,6 +149,9 @@ router.use((req, res, next) => {
   next();
 });
 
+/* capture raw request bodies so POST-based player APIs work through the relay */
+router.use(express.raw({ type: () => true, limit: '3mb' }));
+
 function selfBaseOf(req) {
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers['x-forwarded-host'] || req.headers.host;
@@ -159,17 +162,27 @@ router.get('/health', (req, res) => {
   res.json({ ok: true, relay: 'yrcine', hosts: ALLOW_HOSTS.length, ads: AD_HOSTS.length, ts: Date.now() });
 });
 
-router.get('/proxy', async (req, res) => {
+router.all('/proxy', async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).json({ ok: false, error: 'url required' });
   const host = hostOf(url);
   if (isAdHost(host)) return res.status(204).end();
   if (!isAllowed(host)) return res.status(403).json({ ok: false, error: 'host not allowed', host });
   try {
-    const up = await fetch(url, { headers: {
+    const headers = {
       'user-agent': req.headers['user-agent'] || 'Mozilla/5.0 (Linux; Android 13) Chrome/120 Mobile Safari/537.36',
-      accept: req.headers.accept || '*/*', 'accept-encoding': 'identity',
-    }, signal: AbortSignal.timeout(TIMEOUT) });
+      accept: req.headers.accept || '*/*',
+      'accept-encoding': 'identity',
+    };
+    const init = { method: req.method, headers, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT) };
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      const b = req.body;
+      if (Buffer.isBuffer(b)) init.body = b;
+      else if (b && typeof b === 'object' && Object.keys(b).length) init.body = JSON.stringify(b);
+      else if (typeof b === 'string' && b.length) init.body = b;
+      if (init.body && req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+    }
+    const up = await fetch(url, init);
     const ctype = up.headers.get('content-type') || '';
     if (/mpegurl|vnd\.apple/i.test(ctype) || /\.m3u8($|\?)/i.test(url)) {
       const text = await up.text();
