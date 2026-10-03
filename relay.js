@@ -31,6 +31,7 @@ const express = require('express');
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '20be784f740b6b638c906dde5b35efae';
 const RELAY_SECRET = process.env.RELAY_SECRET || '';
+const RELAY_ENFORCE = process.env.RELAY_ENFORCE === '1';  /* opt-in: a set RELAY_SECRET alone no longer locks the relay */
 const TIMEOUT = Number(process.env.RELAY_TIMEOUT_MS || 20000);
 
 const ALLOW_HOSTS = [
@@ -143,7 +144,7 @@ router.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
-  if (RELAY_SECRET && req.query.k !== RELAY_SECRET && req.headers['x-yr-key'] !== RELAY_SECRET) {
+  if (RELAY_ENFORCE && RELAY_SECRET && req.query.k !== RELAY_SECRET && req.headers['x-yr-key'] !== RELAY_SECRET) {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
   next();
