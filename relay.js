@@ -234,11 +234,17 @@ router.get('/catalog', async (req, res) => {
   if (!path) return res.status(400).json({ ok: false, error: 'path required' });
   const qs = new URLSearchParams();
   Object.keys(req.query).forEach((k) => { if (k !== 'path' && k !== 'k') qs.set(k, req.query[k]); });
-  qs.set('api_key', TMDB_API_KEY);
+  const FALLBACK_TMDB = '20be784f740b6b638c906dde5b35efae';
+  const tmdbCall = (key) => {
+    const q = new URLSearchParams(qs); q.set('api_key', key);
+    return fetch('https://api.themoviedb.org/3/' + path + '?' + q.toString(), { signal: AbortSignal.timeout(TIMEOUT) });
+  };
   try {
-    const r = await fetch('https://api.themoviedb.org/3/' + path + '?' + qs.toString(), { signal: AbortSignal.timeout(TIMEOUT) });
+    let r = await tmdbCall(TMDB_API_KEY);
+    /* if a (mis)configured TMDB_API_KEY is rejected, retry once with the built-in key */
+    if ((r.status === 401 || r.status === 403) && TMDB_API_KEY !== FALLBACK_TMDB) r = await tmdbCall(FALLBACK_TMDB);
     res.setHeader('content-type', 'application/json; charset=utf-8');
-    res.setHeader('cache-control', 'public, max-age=120');
+    res.setHeader('cache-control', (r.status >= 200 && r.status < 300) ? 'public, max-age=120' : 'no-store');
     res.status(r.status).send(await r.text());
   } catch (e) {
     res.status(502).json({ ok: false, error: 'tmdb failed', detail: String(e).slice(0, 160) });
