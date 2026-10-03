@@ -626,6 +626,45 @@ app.get('/api/proxy/image', async (req,res)=>{
   }
 });
 
+// ---------- PROFILE SYNC (Discord-linked) ----------
+// GET  /api/sync?uid=<id>&key=yrcine      -> { ok, data }
+// POST /api/sync  { uid, key, data }      -> { ok, saved }
+// GET  /api/sync?identify=<discordToken>  -> { ok, user }   (server-side Discord identify; avoids CORS)
+// NOTE: storage is an in-process cache (ephemeral on serverless). Swap syncStore for
+// Upstash Redis / Vercel KV for durable cross-instance sync.
+const syncStore = new NodeCache({ stdTTL: 60 * 60 * 24 * 30, checkperiod: 600 });
+app.get('/api/sync', async (req,res)=>{
+  const identify = req.query.identify;
+  if (identify){
+    try {
+      const r = await axios.get('https://discord.com/api/users/@me', {
+        headers: { Authorization: String(identify), 'User-Agent': 'YRcine/1.0' },
+        timeout: 10000, validateStatus: () => true
+      });
+      if (r.status >= 200 && r.status < 300 && r.data && r.data.id){
+        return res.json({ ok:true, user:{ id:r.data.id, username:r.data.username, global_name:r.data.global_name || '', avatar:r.data.avatar || '' } });
+      }
+      return res.status(401).json({ ok:false, error:'discord identify failed' });
+    } catch(e){
+      return res.status(502).json({ ok:false, error:'discord unreachable' });
+    }
+  }
+  const uid = req.query.uid, key = req.query.key || 'yrcine';
+  if (!uid) return res.status(400).json({ ok:false, error:'uid required' });
+  const data = syncStore.get(uid + ':' + key) || null;
+  return res.json({ ok:true, data });
+});
+app.post('/api/sync', (req,res)=>{
+  const b = req.body || {};
+  const uid = b.uid, key = b.key || 'yrcine';
+  if (!uid) return res.status(400).json({ ok:false, error:'uid required' });
+  if (!b.data || typeof b.data !== 'object') return res.status(400).json({ ok:false, error:'data required' });
+  let raw; try { raw = JSON.stringify(b.data); } catch(e){ return res.status(400).json({ ok:false, error:'data not serialisable' }); }
+  if (raw.length > 200000) return res.status(413).json({ ok:false, error:'payload too large' });
+  syncStore.set(uid + ':' + key, b.data);
+  return res.json({ ok:true, saved:true, ts:Date.now() });
+});
+
 // ---------- YRcine relay: no-VPN passthrough for blocked hosts ----------
 // Serves /api/proxy, /api/embed, /api/catalog, /api/image, /api/health-relay.
 // Mounted AFTER the routes above so existing ones (/api/health, /api/proxy/image) win.
