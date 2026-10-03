@@ -7,12 +7,13 @@ jobs:
     steps:
       - name: Probe relay endpoints
         run: |
-          echo "=== /api/health ==="
-          curl -sS -m 30 -w "\nHTTP %{http_code}\n" https://voidanime-backend.vercel.app/api/health || echo "curl failed"
-          echo "=== /api/proxy headers+body ==="
-          curl -sS -i -m 30 "https://voidanime-backend.vercel.app/api/proxy?url=https%3A%2F%2Fexample.com" | head -c 900 || echo "curl failed"
-          echo
-          echo "=== /api/proxy with k=test ==="
-          curl -sS -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/proxy?url=https%3A%2F%2Fexample.com&k=test" || echo "curl failed"
-          echo "=== /api/music/search ==="
-          curl -sS -m 45 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/music/search?q=arijit&limit=3" || echo "curl failed"
+          echo "=== /api/catalog (TMDB trending) ==="
+          curl -sS -m 30 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/catalog?path=trending/all/day" || echo "curl failed"
+          echo "=== /api/proxy (api.themoviedb.org) ==="
+          curl -sS -m 30 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/proxy?url=https%3A%2F%2Fapi.themoviedb.org%2F3%2Ftrending%2Fall%2Fday%3Fapi_key%3D20be784f740b6b638c906dde5b35efae" || echo "curl failed"
+          echo "=== /api/embed (vidfast.pro) ==="
+          curl -sS -m 30 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/embed?url=https%3A%2F%2Fvidfast.pro%2Fmovie%2F533535" || echo "curl failed"
+          echo "=== /api/embed (vidcore.org) ==="
+          curl -sS -m 30 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/embed?url=https%3A%2F%2Fvidcore.org%2Fembed%2Fmovie%2F533535" || echo "curl failed"
+          echo "=== /api/embed (vidsrc.pm) ==="
+          curl -sS -m 30 -o /dev/null -w "HTTP %{http_code}\n" "https://voidanime-backend.vercel.app/api/embed?url=https%3A%2F%2Fvidsrc.pm%2Fembed%2Fmovie%2F533535" || echo "curl failed"
